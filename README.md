@@ -18,10 +18,15 @@ For more information, see the [Admin Guide](https://github.com/facebook/fbctf/wi
 
 # Installation
 
+
 git clone https://github.com/tec-refresh/fbctf
+
 cd fbctf
+
 source ./extra/lib.sh
+
 quick_setup install prod or quick_setup install dev
+
 
 The FBCTF platform was designed with flexibility in mind, allowing for different types of installations depending on the needs of the end user. The FBCTF platform can be installed either in Development Mode, or Production Mode.
 
