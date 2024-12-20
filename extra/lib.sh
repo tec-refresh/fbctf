@@ -289,8 +289,8 @@ function install_composer() {
 }
 
 function install_nodejs() {
-  log "Downloading and setting node.js version 14.x repo information"
-  dl_pipe "https://deb.nodesource.com/setup_14.x" | sudo -E bash -
+  log "Downloading and setting node.js version 10.x repo information"
+  dl_pipe "https://deb.nodesource.com/setup_10.x" | sudo -E bash -
 
   log "Installing node.js"
   package nodejs
