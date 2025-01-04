@@ -289,7 +289,7 @@ fi
     # If multiple servers are being utilized, ensure provision was called from the "nginx" server
     if [[ "$MULTIPLE_SERVERS" == false || "$SERVER_TYPE" = "nginx" ]]; then
         # Packages to be installed in Dev mode
-        if [[ "$MODE" == "dev" ]]; then
+        if [[ "$MODE" == "dev" ]] || [[ "$MODE" == "prod" ]]; then
             package build-essential
             package libssl-dev
             package python-all-dev
