@@ -29,7 +29,7 @@ class ChooseLogoModalController extends ModalController {
           '<div class="fb-choose-emblem">' .
             '<h6>' . htmlspecialchars(tr('Choose an Emblem')) . '</h6>' .
             '<div class="emblem-carousel">' .
-              '<ul class="slides">' . $logo_items . '</ul>' .
+              '<ul class="fb-slider slides">' . $logo_items . '</ul>' .
             '</div>' .
           '</div>' .
           '<div class="action-actionable">' .
