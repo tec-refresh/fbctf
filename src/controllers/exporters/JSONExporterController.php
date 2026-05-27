@@ -1,4 +1,4 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class JSONExporterController {
   public static function genJSON(mixed $data): string {

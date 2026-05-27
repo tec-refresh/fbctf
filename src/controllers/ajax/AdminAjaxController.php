@@ -1,15 +1,14 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class AdminAjaxController extends AjaxController {
-  <<__Override>>
-  protected function getFilters(): array<string, mixed> {
-    return array(
-      'POST' => array(
+  protected function getFilters(): array {
+    return [
+      'POST' => [
         'level_id' => FILTER_VALIDATE_INT,
-        'level_type' => array(
+        'level_type' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => array('regexp' => '/^[a-z]{4}$/'),
-        ),
+          'options' => ['regexp' => '/^[a-z]{4}$/'],
+        ],
         'team_id' => FILTER_VALIDATE_INT,
         'session_id' => FILTER_VALIDATE_INT,
         'cookie' => FILTER_SANITIZE_STRING,
@@ -20,25 +19,25 @@ class AdminAjaxController extends AjaxController {
         'admin' => FILTER_VALIDATE_INT,
         'status' => FILTER_VALIDATE_INT,
         'visible' => FILTER_VALIDATE_INT,
-        'all_type' => array(
+        'all_type' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => array('regexp' => '/^[a-z]{4}$/'),
-        ),
+          'options' => ['regexp' => '/^[a-z]{4}$/'],
+        ],
         'logo_id' => FILTER_VALIDATE_INT,
-        'logo' => array(
+        'logo' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => array('regexp' => '/^[\w-.]+$/'),
-        ),
-        'logo_b64' => array(
+          'options' => ['regexp' => '/^[\w-.]+$/'],
+        ],
+        'logo_b64' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => array('regexp' => '/^[\w+-\/]+={0,2}$/'),
-        ),
+          'options' => ['regexp' => '/^[\w+-\/]+={0,2}$/'],
+        ],
         'entity_id' => FILTER_VALIDATE_INT,
         'attachment_id' => FILTER_VALIDATE_INT,
-        'filename' => array(
+        'filename' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => array('regexp' => '/^[\w\-\.]+$/'),
-        ),
+          'options' => ['regexp' => '/^[\w\-\.]+$/'],
+        ],
         'attachment_file' => FILTER_UNSAFE_RAW,
         'game_file' => FILTER_UNSAFE_RAW,
         'teams_file' => FILTER_UNSAFE_RAW,
@@ -66,28 +65,26 @@ class AdminAjaxController extends AjaxController {
         'announcement' => FILTER_UNSAFE_RAW,
         'announcement_id' => FILTER_VALIDATE_INT,
         'csrf_token' => FILTER_UNSAFE_RAW,
-        'action' => array(
+        'action' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => array('regexp' => '/^[\w-]+$/'),
-        ),
-        'page' => array(
+          'options' => ['regexp' => '/^[\w-]+$/'],
+        ],
+        'page' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => array('regexp' => '/^[\w-]+$/'),
-        ),
-      ),
-      'GET' => array(
-        'action' => array(
+          'options' => ['regexp' => '/^[\w-]+$/'],
+        ],
+      ],
+      'GET' => [
+        'action' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => array('regexp' => '/^[\w-]+$/'),
-        ),
+          'options' => ['regexp' => '/^[\w-]+$/'],
+        ],
         'csrf_token' => FILTER_UNSAFE_RAW,
-      ),
-    );
+      ],
+    ];
   }
-
-  <<__Override>>
-  protected function getActions(): array<string> {
-    return array(
+  protected function getActions(): array {
+    return [
       'create_team',
       'create_quiz',
       'update_quiz',
@@ -146,14 +143,12 @@ class AdminAjaxController extends AjaxController {
       'reset_game_schedule',
       'flush_memcached',
       'reset_database',
-    );
+    ];
   }
-
-  <<__Override>>
-  protected async function genHandleAction(
+  protected function handleAction(
     string $action,
-    array<string, mixed> $params,
-  ): Awaitable<string> {
+    array $params,
+  ): string {
     if ($action !== 'none') {
       // CSRF check
       if (idx($params, 'csrf_token') !== SessionUtils::CSRFToken()) {
@@ -161,10 +156,10 @@ class AdminAjaxController extends AjaxController {
       }
     }
 
-    list($default_bonus, $default_bonusdec) = await \HH\Asio\va(
-      Configuration::gen('default_bonus'),
-      Configuration::gen('default_bonusdec'),
-    );
+    list($default_bonus, $default_bonusdec) = [
+      Configuration::get('default_bonus'),
+      Configuration::get('default_bonusdec'),
+    ];
 
     switch ($action) {
       case 'none':
@@ -172,7 +167,7 @@ class AdminAjaxController extends AjaxController {
       case 'create_quiz':
         $bonus = $default_bonus->getValue();
         $bonus_dec = $default_bonusdec->getValue();
-        await Level::genCreateQuiz(
+        Level::createQuiz(
           must_have_string($params, 'title'),
           must_have_string($params, 'question'),
           must_have_string($params, 'answer'),
@@ -185,7 +180,7 @@ class AdminAjaxController extends AjaxController {
         );
         return Utils::ok_response('Created succesfully', 'admin');
       case 'update_quiz':
-        await Level::genUpdateQuiz(
+        Level::updateQuiz(
           must_have_string($params, 'title'),
           must_have_string($params, 'question'),
           must_have_string($params, 'answer'),
@@ -201,7 +196,7 @@ class AdminAjaxController extends AjaxController {
       case 'create_flag':
         $bonus = $default_bonus->getValue();
         $bonus_dec = $default_bonusdec->getValue();
-        await Level::genCreateFlag(
+        Level::createFlag(
           must_have_string($params, 'title'),
           must_have_string($params, 'description'),
           must_have_string($params, 'flag'),
@@ -215,7 +210,7 @@ class AdminAjaxController extends AjaxController {
         );
         return Utils::ok_response('Created succesfully', 'admin');
       case 'update_flag':
-        await Level::genUpdateFlag(
+        Level::updateFlag(
           must_have_string($params, 'title'),
           must_have_string($params, 'description'),
           must_have_string($params, 'flag'),
@@ -231,7 +226,7 @@ class AdminAjaxController extends AjaxController {
         return Utils::ok_response('Updated succesfully', 'admin');
       case 'create_base':
         $bonus = $default_bonus->getValue();
-        await Level::genCreateBase(
+        Level::createBase(
           must_have_string($params, 'title'),
           must_have_string($params, 'description'),
           must_have_int($params, 'entity_id'),
@@ -243,7 +238,7 @@ class AdminAjaxController extends AjaxController {
         );
         return Utils::ok_response('Created succesfully', 'admin');
       case 'update_base':
-        await Level::genUpdateBase(
+        Level::updateBase(
           must_have_string($params, 'title'),
           must_have_string($params, 'description'),
           must_have_int($params, 'entity_id'),
@@ -256,20 +251,20 @@ class AdminAjaxController extends AjaxController {
         );
         return Utils::ok_response('Updated succesfully', 'admin');
       case 'delete_level':
-        await Level::genDelete(must_have_int($params, 'level_id'));
+        Level::delete(must_have_int($params, 'level_id'));
         return Utils::ok_response('Deleted succesfully', 'admin');
       case 'toggle_status_level':
-        await Level::genSetStatus(
+        Level::setStatus(
           must_have_int($params, 'level_id'),
           must_have_int($params, 'status') === 1,
         );
         return Utils::ok_response('Success', 'admin');
       case 'toggle_status_all':
         if (must_have_string($params, 'all_type') === 'team') {
-          await Team::genSetStatusAll(must_have_int($params, 'status') === 1);
+          Team::setStatusAll(must_have_int($params, 'status') === 1);
           return Utils::ok_response('Success', 'admin');
         } else {
-          await Level::genSetStatusAll(
+          Level::setStatusAll(
             must_have_int($params, 'status') === 1,
             must_have_string($params, 'all_type'),
           );
@@ -278,14 +273,14 @@ class AdminAjaxController extends AjaxController {
       case 'create_team':
         $password_hash =
           Team::generateHash(must_have_string($params, 'password'));
-        await Team::genCreate(
+        Team::create(
           must_have_string($params, 'name'),
           $password_hash,
           must_have_string($params, 'logo'),
         );
         return Utils::ok_response('Created succesfully', 'admin');
       case 'update_team':
-        await Team::genUpdate(
+        Team::update(
           must_have_string($params, 'name'),
           must_have_string($params, 'logo'),
           must_have_int($params, 'points'),
@@ -294,81 +289,81 @@ class AdminAjaxController extends AjaxController {
         if (strlen(must_have_string($params, 'password')) > 0) {
           $password_hash =
             Team::generateHash(must_have_string($params, 'password'));
-          await Team::genUpdateTeamPassword(
+          Team::updateTeamPassword(
             $password_hash,
             must_have_int($params, 'team_id'),
           );
         }
         return Utils::ok_response('Updated succesfully', 'admin');
       case 'toggle_admin_team':
-        await Team::genSetAdmin(
+        Team::setAdmin(
           must_have_int($params, 'team_id'),
           must_have_int($params, 'admin') === 1,
         );
         return Utils::ok_response('Success', 'admin');
       case 'toggle_status_team':
-        await Team::genSetStatus(
+        Team::setStatus(
           must_have_int($params, 'team_id'),
           must_have_int($params, 'status') === 1,
         );
         return Utils::ok_response('Success', 'admin');
       case 'toggle_visible_team':
-        await Team::genSetVisible(
+        Team::setVisible(
           must_have_int($params, 'team_id'),
           must_have_int($params, 'visible') === 1,
         );
         return Utils::ok_response('Success', 'admin');
       case 'enable_logo':
-        await Logo::genSetEnabled(must_have_int($params, 'logo_id'), true);
+        Logo::setEnabled(must_have_int($params, 'logo_id'), true);
         return Utils::ok_response('Success', 'admin');
       case 'disable_logo':
-        await Logo::genSetEnabled(must_have_int($params, 'logo_id'), false);
+        Logo::setEnabled(must_have_int($params, 'logo_id'), false);
         return Utils::ok_response('Success', 'admin');
       case 'enable_country':
-        await Country::genSetStatus(
+        Country::setStatus(
           must_have_int($params, 'country_id'),
           true,
         );
         return Utils::ok_response('Success', 'admin');
       case 'disable_country':
-        await Country::genSetStatus(
+        Country::setStatus(
           must_have_int($params, 'country_id'),
           false,
         );
         return Utils::ok_response('Success', 'admin');
       case 'delete_team':
         // Delete team and associated sessions
-        await \HH\Asio\va(
-          Session::genDeleteByTeam(must_have_int($params, 'team_id')),
-          Team::genDelete(must_have_int($params, 'team_id')),
-        );
+        [
+          Session::deleteByTeam(must_have_int($params, 'team_id')),
+          Team::delete(must_have_int($params, 'team_id')),
+        ];
         return Utils::ok_response('Deleted successfully', 'admin');
       case 'update_session':
-        await Session::genUpdate(
+        Session::update(
           must_have_string($params, 'cookie'),
           must_have_string($params, 'data'),
         );
         return Utils::ok_response('Updated successfully', 'admin');
       case 'delete_session':
-        await Session::genDelete(must_have_string($params, 'cookie'));
+        Session::delete(must_have_string($params, 'cookie'));
         return Utils::ok_response('Deleted successfully', 'admin');
       case 'delete_category':
-        await Category::genDelete(must_have_int($params, 'category_id'));
+        Category::delete(must_have_int($params, 'category_id'));
         return Utils::ok_response('Deleted successfully', 'admin');
       case 'create_category':
-        await Category::genCreate(
+        Category::create(
           must_have_string($params, 'category'),
           false,
         );
         return Utils::ok_response('Created successfully', 'admin');
       case 'update_category':
-        await Category::genUpdate(
+        Category::update(
           must_have_string($params, 'category'),
           must_have_int($params, 'category_id'),
         );
         return Utils::ok_response('Updated successfully', 'admin');
       case 'create_attachment':
-        $result = await Attachment::genCreate(
+        $result = Attachment::create(
           'attachment_file',
           must_have_string($params, 'filename'),
           must_have_int($params, 'level_id'),
@@ -379,36 +374,36 @@ class AdminAjaxController extends AjaxController {
           return ''; // TODO
         }
       case 'update_attachment':
-        await Attachment::genUpdate(
+        Attachment::update(
           must_have_int($params, 'attachment_id'),
           must_have_int($params, 'level_id'),
           must_have_string($params, 'filename'),
         );
         return Utils::ok_response('Updated successfully', 'admin');
       case 'delete_attachment':
-        await Attachment::genDelete(must_have_int($params, 'attachment_id'));
+        Attachment::delete(must_have_int($params, 'attachment_id'));
         return Utils::ok_response('Deleted successfully', 'admin');
       case 'create_link':
-        await Link::genCreate(
+        Link::create(
           must_have_string($params, 'link'),
           must_have_int($params, 'level_id'),
         );
         return Utils::ok_response('Created successfully', 'admin');
       case 'update_link':
-        await Link::genUpdate(
+        Link::update(
           must_have_string($params, 'link'),
           must_have_int($params, 'level_id'),
           must_have_int($params, 'link_id'),
         );
         return Utils::ok_response('Updated succesfully', 'admin');
       case 'delete_link':
-        await Link::genDelete(must_have_int($params, 'link_id'));
+        Link::delete(must_have_int($params, 'link_id'));
         return Utils::ok_response('Deleted successfully', 'admin');
       case 'change_configuration':
         $field = must_have_string($params, 'field');
-        $valid_field = await Configuration::genValidField($field);
+        $valid_field = Configuration::validField($field);
         if ($valid_field) {
-          await Configuration::genUpdate(
+          Configuration::update(
             $field,
             must_have_string($params, 'value'),
           );
@@ -418,118 +413,118 @@ class AdminAjaxController extends AjaxController {
         }
       case 'change_custom_logo':
         $logo = must_have_string($params, 'logo_b64');
-        $custom_logo = await Logo::genCreateCustom($logo, true);
+        $custom_logo = Logo::createCustom($logo, true);
         if ($custom_logo) {
           return Utils::ok_response('Success', 'admin');
         } else {
           return Utils::error_response('Error changing logo', 'admin');
         }
       case 'create_announcement':
-        await Announcement::genCreate(
+        Announcement::create(
           must_have_string($params, 'announcement'),
         );
         return Utils::ok_response('Success', 'admin');
       case 'delete_announcement':
-        await Announcement::genDelete(
+        Announcement::delete(
           must_have_int($params, 'announcement_id'),
         );
         return Utils::ok_response('Success', 'admin');
       case 'create_tokens':
-        await Token::genCreate();
+        Token::create();
         return Utils::ok_response('Success', 'admin');
       case 'export_tokens':
-        await Token::genExport();
+        Token::export();
         return Utils::ok_response('Success', 'admin');
       case 'begin_game':
-        await Control::genBegin();
+        Control::begin();
         return Utils::ok_response('Success', 'admin');
       case 'end_game':
-        await Control::genEnd();
+        Control::end();
         return Utils::ok_response('Success', 'admin');
       case 'pause_game':
-        await Control::genPause();
+        Control::pause();
         return Utils::ok_response('Success', 'admin');
       case 'unpause_game':
-        await Control::genUnpause();
+        Control::unpause();
         return Utils::ok_response('Success', 'admin');
       case 'export_attachments':
-        await Control::exportAttachments();
+        Control::exportAttachments();
         return Utils::ok_response('Success', 'admin');
       case 'backup_db':
-        await Control::backupDb();
+        Control::backupDb();
         return Utils::ok_response('Success', 'admin');
       case 'export_game':
-        await Control::exportGame();
+        Control::exportGame();
         return Utils::ok_response('Success', 'admin');
       case 'export_teams':
-        await Control::exportTeams();
+        Control::exportTeams();
         return Utils::ok_response('Success', 'admin');
       case 'export_logos':
-        await Control::exportLogos();
+        Control::exportLogos();
         return Utils::ok_response('Success', 'admin');
       case 'export_levels':
-        await Control::exportLevels();
+        Control::exportLevels();
         return Utils::ok_response('Success', 'admin');
       case 'export_categories':
-        await Control::exportCategories();
+        Control::exportCategories();
         return Utils::ok_response('Success', 'admin');
       case 'restore_db':
-        $result = await Control::restoreDb();
+        $result = Control::restoreDb();
         if ($result) {
           return Utils::ok_response('Success', 'admin');
         }
         return Utils::error_response('Error importing', 'admin');
       case 'import_game':
-        $result = await Control::importGame();
+        $result = Control::importGame();
         if ($result) {
           return Utils::ok_response('Success', 'admin');
         }
         return Utils::error_response('Error importing', 'admin');
       case 'import_teams':
-        $result = await Control::importTeams();
+        $result = Control::importTeams();
         if ($result) {
           return Utils::ok_response('Success', 'admin');
         }
         return Utils::error_response('Error importing', 'admin');
       case 'import_logos':
-        $result = await Control::importLogos();
+        $result = Control::importLogos();
         if ($result) {
           return Utils::ok_response('Success', 'admin');
         }
         return Utils::error_response('Error importing', 'admin');
       case 'import_levels':
-        $result = await Control::importLevels();
+        $result = Control::importLevels();
         if ($result) {
           return Utils::ok_response('Success', 'admin');
         }
         return Utils::error_response('Error importing', 'admin');
       case 'import_categories':
-        $result = await Control::importCategories();
+        $result = Control::importCategories();
         if ($result) {
           return Utils::ok_response('Success', 'admin');
         }
         return Utils::error_response('Error importing', 'admin');
       case 'import_attachments':
-        $result = await Control::importAttachments();
+        $result = Control::importAttachments();
         if ($result) {
           return Utils::ok_response('Success', 'admin');
         }
         return Utils::error_response('Error importing', 'admin');
       case 'reset_game_schedule':
-        await \HH\Asio\va(
-          Configuration::genUpdate('start_ts', '0'), // Put timestamps to zero
-          Configuration::genUpdate('end_ts', '0'),
-          Configuration::genUpdate('next_game', '0'),
-        );
+        [
+          Configuration::update('start_ts', '0'), // Put timestamps to zero
+          Configuration::update('end_ts', '0'),
+          Configuration::update('next_game', '0'),
+        ];
         return Utils::ok_response('Success', 'admin');
       case 'flush_memcached':
-        $result = await Control::genFlushMemcached();
+        $result = Control::flushMemcached();
         if ($result) {
           return Utils::ok_response('Success', 'admin');
         }
         return Utils::error_response('Error flushing memcached', 'admin');
       case 'reset_database':
-        $result = await Control::genResetDatabase();
+        $result = Control::resetDatabase();
         if ($result) {
           return Utils::ok_response('Success', 'admin');
         }
