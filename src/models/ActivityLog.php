@@ -1,11 +1,10 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class ActivityLog extends Model {
 
   protected static string $MC_KEY = 'activitylog:';
 
-  protected static Map<string, string>
-    $MC_KEYS = Map {'ALL_ACTIVITY' => 'activity'};
+  protected static array $MC_KEYS = ['ALL_ACTIVITY' => 'activity'];
 
   private function __construct(
     private int $id,
@@ -20,17 +19,13 @@ class ActivityLog extends Model {
     private string $formatted_message = '',
     private bool $visible = true,
   ) {
-    $formatted_subject =
-      \HH\Asio\join(self::genFormatString("%s", $this->subject));
+    $formatted_subject = self::formatString("%s", $this->subject);
     $this->formatted_subject = $formatted_subject;
-    $formatted_entity =
-      \HH\Asio\join(self::genFormatString("%s", $this->entity));
+    $formatted_entity = self::formatString("%s", $this->entity);
     $this->formatted_entity = $formatted_entity;
-    $formatted_message =
-      \HH\Asio\join(self::genFormatString($this->message, $this->arguments));
+    $formatted_message = self::formatString($this->message, $this->arguments);
     $this->formatted_message = $formatted_message;
-    $visible =
-      \HH\Asio\join(self::genLogEntryVisible($this->subject, $this->action));
+    $visible = self::logEntryVisible($this->subject, $this->action);
     $this->visible = $visible;
   }
 
@@ -79,7 +74,7 @@ class ActivityLog extends Model {
   }
 
   private static function activitylogFromRow(
-    Map<string, string> $row,
+    array $row,
   ): ActivityLog {
     return new ActivityLog(
       intval(must_have_idx($row, 'id')),
@@ -92,38 +87,38 @@ class ActivityLog extends Model {
     );
   }
 
-  public static async function genFormatString(
+  public static function formatString(
     string $string,
     string $arguments,
-  ): Awaitable<string> {
+  ): string {
     if ($arguments !== '') {
-      $variables = array();
+      $variables = [];
       $values_array = explode(',', $arguments);
       foreach ($values_array as $value) {
         list($class, $id) = explode(':', $value);
         switch ($class) {
           case "Team":
-            $team_exists = await Team::genTeamExistById(intval($id));
+            $team_exists = Team::teamExistById(intval($id));
             if ($team_exists === true) {
-              $team = await MultiTeam::genTeam(intval($id));
+              $team = MultiTeam::team(intval($id));
               $variables[] = $team->getName();
             } else {
               return '';
             }
             break;
           case "Level":
-            $level_exists = await Level::genAlreadyExistById(intval($id));
+            $level_exists = Level::alreadyExistById(intval($id));
             if ($level_exists === true) {
-              $level = await Level::gen(intval($id));
+              $level = Level::get(intval($id));
               $variables[] = $level->getTitle();
             } else {
               return '';
             }
             break;
           case "Country":
-            $country_exists = await Country::genCheckExistsById(intval($id));
+            $country_exists = Country::checkExistsById(intval($id));
             if ($country_exists === true) {
-              $country = await Country::gen(intval($id));
+              $country = Country::get(intval($id));
               $variables[] = $country->getIsoCode();
             } else {
               return '';
@@ -141,18 +136,18 @@ class ActivityLog extends Model {
     return $string;
   }
 
-  public static async function genLogEntryVisible(
+  public static function logEntryVisible(
     string $subject,
     string $action,
-  ): Awaitable<bool> {
+  ): bool {
     if ($subject === '') {
       return true;
     }
     list($class, $id) = explode(':', $subject);
     if ($class === 'Team' && $action === 'captured') {
-      $team_exists = await Team::genTeamExistById(intval($id));
+      $team_exists = Team::teamExistById(intval($id));
       if ($team_exists === true) {
-        $team = await MultiTeam::genTeam(intval($id));
+        $team = MultiTeam::team(intval($id));
         return $team->getVisible();
       } else
         return false;
@@ -160,33 +155,28 @@ class ActivityLog extends Model {
     return true;
   }
 
-  public static async function genCreate(
+  public static function create(
     string $subject,
     string $action,
     string $entity,
     string $message,
     string $arguments,
-  ): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf(
-      'INSERT INTO activity_log (ts, subject, action, entity, message, arguments) (SELECT NOW(), %s, %s, %s, %s, %s) LIMIT 1',
-      $subject,
-      $action,
-      $entity,
-      $message,
-      $arguments,
+  ): void {
+    $db = Db::getInstance();
+    $db->query(
+      'INSERT INTO activity_log (ts, subject, action, entity, message, arguments) (SELECT NOW(), ?, ?, ?, ?, ?) LIMIT 1',
+      [$subject, $action, $entity, $message, $arguments],
     );
 
     self::invalidateMCRecords(); // Invalidate Memcached ActivityLog data.
   }
 
-  public static async function genCaptureLog(
+  public static function captureLog(
     int $team_id,
     int $level_id,
-  ): Awaitable<void> {
-    //$level = await Level::gen($level_id);
-    $country_id = await Level::genCountryIdForLevel($level_id);
-    await self::genCreateActionLog(
+  ): void {
+    $country_id = Level::countryIdForLevel($level_id);
+    self::createActionLog(
       "Team",
       $team_id,
       "captured",
@@ -195,14 +185,14 @@ class ActivityLog extends Model {
     );
   }
 
-  public static async function genCreateActionLog(
+  public static function createActionLog(
     string $subject_class,
     int $subject_id,
     string $action,
     string $entity_class,
     int $entity_id,
-  ): Awaitable<void> {
-    await self::genCreate(
+  ): void {
+    self::create(
       "$subject_class:$subject_id",
       $action,
       "$entity_class:$entity_id",
@@ -211,20 +201,18 @@ class ActivityLog extends Model {
     );
   }
 
-  public static async function genCreateGameActionLog(
+  public static function createGameActionLog(
     string $subject_class,
     int $subject_id,
     string $action,
     string $entity_class,
     int $entity_id,
-  ): Awaitable<void> {
-    list($config_game, $config_pause) = await \HH\Asio\va(
-      Configuration::gen('game'),
-      Configuration::gen('game_paused'),
-    );
+  ): void {
+    $config_game = Configuration::get('game');
+    $config_pause = Configuration::get('game_paused');
     if ((intval($config_game->getValue()) === 1) &&
         (intval($config_pause->getValue()) === 0)) {
-      await self::genCreate(
+      self::create(
         "$subject_class:$subject_id",
         $action,
         "$entity_class:$entity_id",
@@ -234,15 +222,15 @@ class ActivityLog extends Model {
     }
   }
 
-  public static async function genAdminLog(
+  public static function adminLog(
     string $action,
     string $entity_class,
     int $entity_id,
-  ): Awaitable<void> {
+  ): void {
     if (SessionUtils::sessionActive() === false) {
       return;
     }
-    await self::genCreateGameActionLog(
+    self::createGameActionLog(
       "Team",
       SessionUtils::sessionTeam(),
       $action,
@@ -251,43 +239,44 @@ class ActivityLog extends Model {
     );
   }
 
-  public static async function genCreateGenericLog(
+  public static function createGenericLog(
     string $message,
     string $arguments = '',
-  ): Awaitable<void> {
-    await self::genCreate('', '', '', $message, $arguments);
+  ): void {
+    self::create('', '', '', $message, $arguments);
   }
 
-  public static async function genDelete(
+  public static function delete(
     int $activity_log_id,
-  ): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf(
-      'DELETE FROM activity_log WHERE id = %d LIMIT 1',
-      $activity_log_id,
+  ): void {
+    $db = Db::getInstance();
+    $db->query(
+      'DELETE FROM activity_log WHERE id = ? LIMIT 1',
+      [$activity_log_id],
     );
 
     self::invalidateMCRecords(); // Invalidate Memcached Announcement data.
   }
 
-  public static async function genDeleteAll(): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf('TRUNCATE TABLE activity_log');
+  public static function deleteAll(): void {
+    $db = Db::getInstance();
+    $db->query('TRUNCATE TABLE activity_log', []);
 
     self::invalidateMCRecords(); // Invalidate Memcached Announcement data.
   }
 
-  public static async function genAllActivity(
+  public static function allActivity(
     bool $refresh = false,
-  ): Awaitable<array<ActivityLog>> {
+  ): array {
     $mc_result = self::getMCRecords('ALL_ACTIVITY');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $activity_log_lines = array();
-      $result = await $db->query(
+      $db = Db::getInstance();
+      $activity_log_lines = [];
+      $result = $db->query(
         'SELECT * FROM activity_log ORDER BY ts DESC LIMIT 100',
+        [],
       );
-      foreach ($result->mapRows() as $row) {
+      foreach ($result->fetchAll() as $row) {
         $activity_log = self::activitylogFromRow($row);
         if (($activity_log->getFormattedMessage() !== '') ||
             (($activity_log->getFormattedSubject() !== '') &&
@@ -298,10 +287,7 @@ class ActivityLog extends Model {
       self::setMCRecords('ALL_ACTIVITY', $activity_log_lines);
       return $activity_log_lines;
     }
-    invariant(
-      is_array($mc_result),
-      'cache return should be an array of ActivityLog',
-    );
+    if (!is_array($mc_result)) { throw new RuntimeException('cache return should be an array of ActivityLog'); }
     return $mc_result;
   }
 }

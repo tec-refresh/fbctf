@@ -1,6 +1,5 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 interface Exportable {
-  public static function exportAll(
-  ): Awaitable<array<string, array<string, mixed>>>;
+  public static function exportAll(): array;
 }

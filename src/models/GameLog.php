@@ -1,4 +1,4 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class GameLog extends Model {
   private function __construct(
@@ -39,7 +39,7 @@ class GameLog extends Model {
     return $this->flag;
   }
 
-  private static function gamelogFromRow(Map<string, string> $row): GameLog {
+  private static function gamelogFromRow(array $row): GameLog {
     return new GameLog(
       must_have_idx($row, 'ts'),
       must_have_idx($row, 'entry'),
@@ -52,19 +52,15 @@ class GameLog extends Model {
   }
 
   // Get all game scores.
-  public static async function genGameLog(): Awaitable<array<GameLog>> {
-    $db = await self::genDb();
-    $result =
-      await $db->queryf(
-        'SELECT ts, %s AS entry, team_id, level_id, points, type, %s AS flag FROM scores_log UNION SELECT ts, %s AS entry, team_id, level_id, 0 AS points, %s AS type, flag FROM failures_log ORDER BY ts DESC',
-        'score',
-        '',
-        'failure',
-        '',
-      );
+  public static function gameLog(): array {
+    $db = Db::getInstance();
+    $result = $db->query(
+      'SELECT ts, ? AS entry, team_id, level_id, points, type, ? AS flag FROM scores_log UNION SELECT ts, ? AS entry, team_id, level_id, 0 AS points, ? AS type, flag FROM failures_log ORDER BY ts DESC',
+      ['score', '', 'failure', ''],
+    );
 
-    $gamelog = array();
-    foreach ($result->mapRows() as $row) {
+    $gamelog = [];
+    foreach ($result->fetchAll() as $row) {
       $gamelog[] = self::gamelogFromRow($row);
     }
 

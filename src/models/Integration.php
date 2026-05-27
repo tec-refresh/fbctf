@@ -1,4 +1,4 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 use Facebook\GraphNodes\GraphNode\Collection as GraphCollection;
 
@@ -6,33 +6,30 @@ class Integration extends Model {
 
   private function __construct(private string $type) {}
 
-  protected static Cache $INTEGRATION_CACHE = MUST_MODIFY;
+  protected static $INTEGRATION_CACHE = null;
 
   public function getType(): string {
     return $this->type;
   }
 
   public static function getIntegrationCacheObject(): Cache {
-    if (self::$INTEGRATION_CACHE === MUST_MODIFY) {
+    if (self::$INTEGRATION_CACHE === null) {
       self::$INTEGRATION_CACHE = new Cache();
     }
-    invariant(
-      self::$INTEGRATION_CACHE instanceof Cache,
-      'Integration::$INTEGRATION_CACHE should of type Map and not null',
-    );
+    if (!(self::$INTEGRATION_CACHE instanceof Cache)) { throw new RuntimeException('Integration::$INTEGRATION_CACHE should of type Map and not null'); }
     return self::$INTEGRATION_CACHE;
   }
 
-  public static async function facebookOAuthEnabled(): Awaitable<bool> {
+  public static function facebookOAuthEnabled(): bool {
     return Configuration::getFacebookOAuthSettingsExists();
   }
 
-  public static async function googleOAuthEnabled(): Awaitable<bool> {
+  public static function googleOAuthEnabled(): bool {
     return Configuration::getGoogleOAuthFileExists();
   }
 
-  public static async function facebookLoginEnabled(): Awaitable<bool> {
-    $login_facebook = await Configuration::gen('login_facebook');
+  public static function facebookLoginEnabled(): bool {
+    $login_facebook = Configuration::get('login_facebook');
     $oauth = Configuration::getFacebookOAuthSettingsExists();
 
     $login_facebook_enabled =
@@ -45,8 +42,8 @@ class Integration extends Model {
     }
   }
 
-  public static async function googleLoginEnabled(): Awaitable<bool> {
-    $login_google = await Configuration::gen('login_google');
+  public static function googleLoginEnabled(): bool {
+    $login_google = Configuration::get('login_google');
     $oauth = Configuration::getGoogleOAuthFileExists();
 
     $login_google_enabled = $login_google->getValue() === '1' ? true : false;
@@ -58,10 +55,10 @@ class Integration extends Model {
     }
   }
 
-  public static async function genFacebookAuthURL(
+  public static function facebookAuthURL(
     string $redirect,
     bool $rerequest = false,
-  ): Awaitable<(Facebook, string)> {
+  ): array {
     $host = strval(idx(Utils::getSERVER(), 'HTTP_HOST'));
     $app_id = Configuration::getFacebookOAuthSettingsAppId();
     $app_secret = Configuration::getFacebookOAuthSettingsAppSecret();
@@ -84,11 +81,10 @@ class Integration extends Model {
     if ($rerequest === true) {
       $auth_url .= '&auth_type=rerequest';
     }
-    return tuple($client, $auth_url);
+    return [$client, $auth_url];
   }
 
-  public static async function genFacebookAPIClient(
-  ): Awaitable<(Facebook, string)> {
+  public static function facebookAPIClient(): array {
     $host = strval(idx(Utils::getSERVER(), 'HTTP_HOST'));
     $app_id = Configuration::getFacebookOAuthSettingsAppId();
     $app_secret = Configuration::getFacebookOAuthSettingsAppSecret();
@@ -102,12 +98,12 @@ class Integration extends Model {
 
     $access_token = $app_id.'|'.$app_secret;
 
-    return tuple($client, $access_token);
+    return [$client, $access_token];
   }
 
-  public static async function genGoogleAuthURL(
+  public static function googleAuthURL(
     string $redirect,
-  ): Awaitable<(Google_Client, string)> {
+  ): array {
     $host = strval(idx(Utils::getSERVER(), 'HTTP_HOST'));
     $google_oauth_file = Configuration::getGoogleOAuthFile();
     $client = new Google_Client();
@@ -132,11 +128,11 @@ class Integration extends Model {
 
     $auth_url = $client->createAuthUrl();
 
-    return tuple($client, $auth_url);
+    return [$client, $auth_url];
   }
 
-  public static async function genFacebookLogin(): Awaitable<string> {
-    list($client, $url) = await self::genFacebookAuthURL("login");
+  public static function facebookLogin(): string {
+    list($client, $url) = self::facebookAuthURL("login");
     $helper = $client->getRedirectLoginHelper();
 
     $code = idx(Utils::getGET(), 'code', false);
@@ -176,36 +172,33 @@ class Integration extends Model {
 
         if ($id === null) {
           error_log("Facebook OAuth Failed - Missing id Field");
-          list($client, $url) = await self::genFacebookAuthURL("login", true);
+          list($client, $url) = self::facebookAuthURL("login", true);
           return $url;
         }
 
         if ($email === null) {
           error_log("Facebook OAuth Failed - Missing email Field - $id");
-          list($client, $url) = await self::genFacebookAuthURL("login", true);
+          list($client, $url) = self::facebookAuthURL("login", true);
           return $url;
         }
 
-        list($oauth_token_exists, $registration_facebook) =
-          await \HH\Asio\va(
-            Team::genAuthTokenExists('facebook_oauth', strval($email)),
-            Configuration::gen('registration_facebook'),
-          );
+        $oauth_token_exists = Team::authTokenExists('facebook_oauth', strval($email));
+        $registration_facebook = Configuration::get('registration_facebook');
 
         if ($oauth_token_exists === true) {
-          $url = await self::genLoginURL("facebook_oauth", $email);
+          $url = self::loginURL("facebook_oauth", $email);
         } else if ($registration_facebook->getValue() === '1') {
-          $team_id = await self::genRegisterTeam($email, $id);
+          $team_id = self::registerTeam($email, $id);
 
           if (is_int($team_id) === true) {
-            $set_integrations = await self::genSetTeamIntegrations(
+            $set_integrations = self::setTeamIntegrations(
               $team_id,
               'facebook_oauth',
               $email,
               $id,
             );
             if ($set_integrations === true) {
-              $url = await self::genLoginURL('facebook_oauth', $email);
+              $url = self::loginURL('facebook_oauth', $email);
             }
           }
         }
@@ -217,15 +210,15 @@ class Integration extends Model {
     return $url;
   }
 
-  public static async function genGoogleLogin(): Awaitable<string> {
-    list($client, $url) = await self::genGoogleAuthURL("login");
+  public static function googleLogin(): string {
+    list($client, $url) = self::googleAuthURL("login");
 
     $code = idx(Utils::getGET(), 'code', false);
     $error = idx(Utils::getGET(), 'error', false);
     $state = idx(Utils::getGET(), 'state', false);
 
     if ($code !== false) {
-      $integration_csrf_token = /* HH_IGNORE_ERROR[2050] */
+      $integration_csrf_token =
         idx($_COOKIE, 'integration_csrf_token', false);
       if (strval($integration_csrf_token) === '' ||
           strval($state) === '' ||
@@ -244,24 +237,22 @@ class Integration extends Model {
       $email = $profile->email;
       $id = $profile->id;
 
-      list($oauth_token_exists, $registration_google) = await \HH\Asio\va(
-        Team::genAuthTokenExists('google_oauth', strval($email)),
-        Configuration::gen('registration_google'),
-      );
+      $oauth_token_exists = Team::authTokenExists('google_oauth', strval($email));
+      $registration_google = Configuration::get('registration_google');
 
       if ($oauth_token_exists === true) {
-        $url = await self::genLoginURL('google_oauth', $email);
+        $url = self::loginURL('google_oauth', $email);
       } else if ($registration_google->getValue() === '1') {
-        $team_id = await self::genRegisterTeam($email, $id);
+        $team_id = self::registerTeam($email, $id);
         if (is_int($team_id) === true) {
-          $set_integrations = await self::genSetTeamIntegrations(
+          $set_integrations = self::setTeamIntegrations(
             $team_id,
             'google_oauth',
             $email,
             $id,
           );
           if ($set_integrations === true) {
-            $url = await self::genLoginURL('google_oauth', $email);
+            $url = self::loginURL('google_oauth', $email);
           }
         }
       }
@@ -272,11 +263,11 @@ class Integration extends Model {
     return $url;
   }
 
-  public static async function genLoginURL(
+  public static function loginURL(
     string $type,
     string $token,
-  ): Awaitable<string> {
-    $team = await Team::genTeamFromOAuthToken($type, $token);
+  ): string {
+    $team = Team::teamFromOAuthToken($type, $token);
 
     SessionUtils::sessionRefresh();
     if (!SessionUtils::sessionActive()) {
@@ -305,8 +296,8 @@ class Integration extends Model {
     return $login_url;
   }
 
-  public static async function genFacebookOAuth(): Awaitable<bool> {
-    list($client, $url) = await self::genFacebookAuthURL("oauth");
+  public static function facebookOAuth(): bool {
+    list($client, $url) = self::facebookAuthURL("oauth");
     $helper = $client->getRedirectLoginHelper();
 
     $code = idx(Utils::getGET(), 'code');
@@ -342,12 +333,12 @@ class Integration extends Model {
         $id = $profile['third_party_id'];
 
         if ($email === null) {
-          list($client, $url) = await self::genFacebookAuthURL("oauth", true);
+          list($client, $url) = self::facebookAuthURL("oauth", true);
           header('Location: '.filter_var($url, FILTER_SANITIZE_URL));
           exit;
         }
 
-        $set_integrations = await self::genSetTeamIntegrations(
+        $set_integrations = self::setTeamIntegrations(
           SessionUtils::sessionTeam(),
           'facebook_oauth',
           $email,
@@ -364,15 +355,15 @@ class Integration extends Model {
     return false;
   }
 
-  public static async function genGoogleOAuth(): Awaitable<bool> {
-    list($client, $url) = await self::genGoogleAuthURL("oauth");
+  public static function googleOAuth(): bool {
+    list($client, $url) = self::googleAuthURL("oauth");
 
     $code = idx(Utils::getGET(), 'code', false);
     $error = idx(Utils::getGET(), 'error', false);
     $state = idx(Utils::getGET(), 'state', false);
 
     if ($code !== false) {
-      $integration_csrf_token = /* HH_IGNORE_ERROR[2050] */
+      $integration_csrf_token =
         idx($_COOKIE, 'integration_csrf_token', false);
       if (strval($integration_csrf_token) === '' ||
           strval($state) === '' ||
@@ -390,7 +381,7 @@ class Integration extends Model {
       $email = $profile->email;
       $id = $profile->id;
 
-      $set_integrations = await self::genSetTeamIntegrations(
+      $set_integrations = self::setTeamIntegrations(
         SessionUtils::sessionTeam(),
         'google_oauth',
         $email,
@@ -406,16 +397,14 @@ class Integration extends Model {
     return false;
   }
 
-  public static async function genSetTeamIntegrations(
+  public static function setTeamIntegrations(
     int $team_id,
     string $type,
     string $email,
     string $id,
-  ): Awaitable<bool> {
-    list($livesync_password_update, $oauth_token_update) = await \HH\Asio\va(
-      Team::genSetLiveSyncPassword($team_id, $type, $email, $id),
-      Team::genSetOAuthToken($team_id, $type, $email),
-    );
+  ): bool {
+    $livesync_password_update = Team::setLiveSyncPassword($team_id, $type, $email, $id);
+    $oauth_token_update = Team::setOAuthToken($team_id, $type, $email);
 
     if (($livesync_password_update === true) &&
         ($oauth_token_update === true)) {
@@ -425,15 +414,13 @@ class Integration extends Model {
     }
   }
 
-  public static async function genRegisterTeam(
+  public static function registerTeam(
     string $email,
     string $id,
     string $name = '',
-  ): Awaitable<int> {
-    list($registration_prefix, $logo_name) = await \HH\Asio\va(
-      Configuration::gen('registration_prefix'),
-      Logo::genRandomLogo(),
-    );
+  ): int {
+    $registration_prefix = Configuration::get('registration_prefix');
+    $logo_name = Logo::randomLogo();
 
     $team_password = Team::generateHash(random_bytes(100));
     $team_name = substr(
@@ -446,13 +433,13 @@ class Integration extends Model {
     if ($name !== '') {
       $team_name = substr(strval($name), 0, 20);
     }
-    $team_id = await Team::genCreate($team_name, $team_password, $logo_name);
+    $team_id = Team::create($team_name, $team_password, $logo_name);
     return $team_id;
   }
 
-  public static async function genFacebookThirdPartyExists(
+  public static function facebookThirdPartyExists(
     string $third_party_id,
-  ): Awaitable<bool> {
+  ): bool {
     self::getIntegrationCacheObject();
     if (self::$INTEGRATION_CACHE->getCache(
           'facebook_exists:'.$third_party_id,
@@ -460,7 +447,7 @@ class Integration extends Model {
         true) {
       return true;
     } else {
-      list($client, $access_token) = await self::genFacebookAPIClient();
+      list($client, $access_token) = self::facebookAPIClient();
 
       try {
         $response =
@@ -492,16 +479,16 @@ class Integration extends Model {
     }
   }
 
-  public static async function genFacebookThirdPartyEmail(
+  public static function facebookThirdPartyEmail(
     string $third_party_id,
-  ): Awaitable<string> {
+  ): string {
     self::getIntegrationCacheObject();
     $integration_local_cache =
       self::$INTEGRATION_CACHE->getCache('facebook_email:'.$third_party_id);
     if ($integration_local_cache !== false) {
       return strval($integration_local_cache);
     } else {
-      list($client, $access_token) = await self::genFacebookAPIClient();
+      list($client, $access_token) = self::facebookAPIClient();
 
       try {
         $response =

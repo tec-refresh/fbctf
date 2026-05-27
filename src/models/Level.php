@@ -1,16 +1,15 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class Level extends Model implements Importable, Exportable {
 
   protected static string $MC_KEY = 'level:';
 
-  protected static Map<string, string>
-    $MC_KEYS = Map {
-      'LEVEL_BY_COUNTRY' => 'level_by_country',
-      'ALL_LEVELS' => 'all_levels',
-      'ALL_ACTIVE_LEVELS' => 'active_levels',
-      'ALL_LEVELS_COUNTRY_MAP' => 'all_levels_country_map',
-    };
+  protected static array $MC_KEYS = [
+    'LEVEL_BY_COUNTRY' => 'level_by_country',
+    'ALL_LEVELS' => 'all_levels',
+    'ALL_ACTIVE_LEVELS' => 'active_levels',
+    'ALL_LEVELS_COUNTRY_MAP' => 'all_levels_country_map',
+  ];
 
   private function __construct(
     private int $id,
@@ -90,7 +89,7 @@ class Level extends Model implements Importable, Exportable {
     return $this->created_ts;
   }
 
-  private static function levelFromRow(Map<string, string> $row): Level {
+  private static function levelFromRow(array $row): Level {
     return new Level(
       intval(must_have_idx($row, 'id')),
       intval(must_have_idx($row, 'active')),
@@ -111,33 +110,28 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Retrieve the level that is using one country
-  public static async function genWhoUses(
+  public static function whoUses(
     int $country_id,
     bool $refresh = false,
-  ): Awaitable<?Level> {
+  ): ?Level {
     $mc_result = self::getMCRecords('LEVEL_BY_COUNTRY');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $level_by_country = Map {};
-      $result = await $db->queryf('SELECT * FROM levels WHERE active = 1');
-      foreach ($result->mapRows() as $row) {
-        $level_by_country->add(
-          Pair {intval($row->get('entity_id')), self::levelFromRow($row)},
-        );
+      $db = Db::getInstance();
+      $level_by_country = [];
+      $result = $db->query('SELECT * FROM levels WHERE active = 1', []);
+      foreach ($result->fetchAll() as $row) {
+        $level_by_country[intval($row['entity_id'])] = self::levelFromRow($row);
       }
       self::setMCRecords('LEVEL_BY_COUNTRY', $level_by_country);
-      if ($level_by_country->contains($country_id)) {
-        return $level_by_country->get($country_id);
+      if (array_key_exists($country_id, $level_by_country)) {
+        return $level_by_country[$country_id];
       } else {
         return null;
       }
     } else {
-      invariant(
-        $mc_result instanceof Map,
-        'cache return should be of type Map',
-      );
-      if ($mc_result->contains($country_id)) {
-        return $mc_result->get($country_id);
+      if (!is_array($mc_result)) { throw new RuntimeException('cache return should be of type array'); }
+      if (array_key_exists($country_id, $mc_result)) {
+        return $mc_result[$country_id];
       } else {
         return null;
       }
@@ -145,25 +139,21 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Import levels.
-  public static async function importAll(
-    array<string, array<string, mixed>> $elements,
-  ): Awaitable<bool> {
+  public static function importAll(
+    array $elements,
+  ): bool {
     foreach ($elements as $level) {
       $title = must_have_string($level, 'title');
       $type = must_have_string($level, 'type');
       $entity_iso_code = must_have_string($level, 'entity_iso_code');
       $c = must_have_string($level, 'category');
-      $exist = await self::genAlreadyExist($type, $title, $entity_iso_code);
-      list($entity_exist, $category_exist) = await \HH\Asio\va(
-        Country::genCheckExists($entity_iso_code),
-        Category::genCheckExists($c),
-      ); // TODO: Combine Awaits
+      $exist = self::alreadyExist($type, $title, $entity_iso_code);
+      $entity_exist = Country::checkExists($entity_iso_code);
+      $category_exist = Category::checkExists($c);
       if (!$exist && $entity_exist && $category_exist) {
-        list($entity, $category) = await \HH\Asio\va(
-          Country::genCountry($entity_iso_code),
-          Category::genSingleCategoryByName($c),
-        ); // TODO: Combine Awaits
-        $level_id = await self::genCreate(
+        $entity = Country::country($entity_iso_code);
+        $category = Category::singleCategoryByName($c);
+        $level_id = self::create(
           $type,
           $title,
           must_have_string($level, 'description'),
@@ -179,23 +169,20 @@ class Level extends Model implements Importable, Exportable {
         );
         if (array_key_exists('links', $level)) {
           $links = must_have_idx($level, 'links');
-          invariant(is_array($links), 'links must be of type array');
+          if (!is_array($links)) { throw new RuntimeException('links must be of type array'); }
           foreach ($links as $link) {
-            await Link::genCreate($link, $level_id); // TODO: Combine Awaits
+            Link::create($link, $level_id);
           }
         }
         if (array_key_exists('attachments', $level)) {
           $attachments = must_have_idx($level, 'attachments');
-          invariant(
-            is_array($attachments),
-            'attachments must be of type array',
-          );
+          if (!is_array($attachments)) { throw new RuntimeException('attachments must be of type array'); }
           foreach ($attachments as $attachment) {
-            await Attachment::genImportAttachments(
+            Attachment::importAttachments(
               $level_id,
               $attachment['filename'],
               $attachment['type'],
-            ); // TODO: Combine Awaits
+            );
           }
         }
       }
@@ -204,31 +191,28 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Export levels.
-  public static async function exportAll(
-  ): Awaitable<array<string, array<string, mixed>>> {
-    $all_levels_data = array();
-    $all_levels = await self::genAllLevels();
+  public static function exportAll(): array {
+    $all_levels_data = [];
+    $all_levels = self::allLevels();
 
     foreach ($all_levels as $level) {
-      list($entity, $category, $links, $attachments) = await \HH\Asio\va(
-        Country::gen($level->getEntityId()),
-        Category::genSingleCategory($level->getCategoryId()),
-        Link::genAllLinks($level->getId()),
-        Attachment::genAllAttachments($level->getId()),
-      ); // TODO: Combine Awaits
+      $entity = Country::get($level->getEntityId());
+      $category = Category::singleCategory($level->getCategoryId());
+      $links = Link::allLinks($level->getId());
+      $attachments = Attachment::allAttachments($level->getId());
 
-      $link_array = array();
+      $link_array = [];
       foreach ($links as $link) {
         $link_array[] = $link->getLink();
       }
-      $attachment_array = array();
+      $attachment_array = [];
       foreach ($attachments as $attachment) {
         $attachment_array[] = [
           'filename' => $attachment->getFilename(),
           'type' => $attachment->getType(),
         ];
       }
-      $one_level = array(
+      $one_level = [
         'type' => $level->getType(),
         'title' => $level->getTitle(),
         'active' => $level->getActive(),
@@ -244,41 +228,37 @@ class Level extends Model implements Importable, Exportable {
         'penalty' => $level->getPenalty(),
         'links' => $link_array,
         'attachments' => $attachment_array,
-      );
+      ];
       array_push($all_levels_data, $one_level);
     }
-    return array('levels' => $all_levels_data);
+    return ['levels' => $all_levels_data];
   }
 
   // Check to see if the level is active.
-  public static async function genCheckStatus(
+  public static function checkStatus(
     int $level_id,
     bool $refresh = false,
-  ): Awaitable<bool> {
+  ): bool {
     $mc_result = self::getMCRecords('ALL_ACTIVE_LEVELS');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $active_levels = Map {};
-      $result = await $db->queryf(
+      $db = Db::getInstance();
+      $active_levels = [];
+      $result = $db->query(
         'SELECT * FROM levels WHERE active = 1 ORDER BY id',
+        [],
       );
-      foreach ($result->mapRows() as $row) {
-        $active_levels->add(
-          Pair {intval($row->get('id')), self::levelFromRow($row)},
-        );
+      foreach ($result->fetchAll() as $row) {
+        $active_levels[intval($row['id'])] = self::levelFromRow($row);
       }
       self::setMCRecords('ALL_ACTIVE_LEVELS', $active_levels);
-      if ($active_levels->contains($level_id)) {
+      if (array_key_exists($level_id, $active_levels)) {
         return true;
       } else {
         return false;
       }
     } else {
-      invariant(
-        $mc_result instanceof Map,
-        'cache return should be of type Map',
-      );
-      if ($mc_result->contains($level_id)) {
+      if (!is_array($mc_result)) { throw new RuntimeException('cache return should be of type array'); }
+      if (array_key_exists($level_id, $mc_result)) {
         return true;
       } else {
         return false;
@@ -287,26 +267,25 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Check to see if the level is a base.
-  public static async function genCheckBase(
+  public static function checkBase(
     int $level_id,
     bool $refresh = false,
-  ): Awaitable<bool> {
+  ): bool {
     $mc_result = self::getMCRecords('ALL_ACTIVE_LEVELS');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $active_levels = Map {};
-      $result = await $db->queryf(
+      $db = Db::getInstance();
+      $active_levels = [];
+      $result = $db->query(
         'SELECT * FROM levels WHERE active = 1 ORDER BY id',
+        [],
       );
-      foreach ($result->mapRows() as $row) {
-        $active_levels->add(
-          Pair {intval($row->get('id')), self::levelFromRow($row)},
-        );
+      foreach ($result->fetchAll() as $row) {
+        $active_levels[intval($row['id'])] = self::levelFromRow($row);
       }
       self::setMCRecords('ALL_ACTIVE_LEVELS', $active_levels);
-      if ($active_levels->contains($level_id)) {
-        $level = $active_levels->get($level_id);
-        invariant($level instanceof Level, 'level should be type of Level');
+      if (array_key_exists($level_id, $active_levels)) {
+        $level = $active_levels[$level_id];
+        if (!($level instanceof Level)) { throw new RuntimeException('level should be type of Level'); }
         if ($level->type == 'base') {
           return true;
         } else {
@@ -316,13 +295,10 @@ class Level extends Model implements Importable, Exportable {
         return false;
       }
     } else {
-      invariant(
-        $mc_result instanceof Map,
-        'cache return should be of type Map',
-      );
-      if ($mc_result->contains($level_id)) {
-        $level = $mc_result->get($level_id);
-        invariant($level instanceof Level, 'level should be type of Level');
+      if (!is_array($mc_result)) { throw new RuntimeException('cache return should be of type array'); }
+      if (array_key_exists($level_id, $mc_result)) {
+        $level = $mc_result[$level_id];
+        if (!($level instanceof Level)) { throw new RuntimeException('level should be type of Level'); }
         if ($level->type === 'base') {
           return true;
         } else {
@@ -335,7 +311,7 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Create a team and return the created level id.
-  public static async function genCreate(
+  public static function create(
     string $type,
     string $title,
     string $description,
@@ -348,66 +324,48 @@ class Level extends Model implements Importable, Exportable {
     string $flag,
     string $hint,
     int $penalty,
-  ): Awaitable<int> {
-    $db = await self::genDb();
+  ): int {
+    $db = Db::getInstance();
 
     if ($entity_id === 0) {
-      $ent_id = await Country::genRandomAvailableCountryId();
+      $ent_id = Country::randomAvailableCountryId();
     } else {
       $ent_id = $entity_id;
     }
-    await $db->queryf(
+    $db->query(
       'INSERT INTO levels '.
       '(type, title, description, entity_id, category_id, points, bonus, bonus_dec, bonus_fix, flag, hint, penalty, active, created_ts) '.
-      'VALUES (%s, %s, %s, %d, %d, %d, %d, %d, %d, %s, %s, %d, %d, NOW())',
-      $type,
-      $title,
-      $description,
-      $ent_id,
-      $category_id,
-      $points,
-      $bonus,
-      $bonus_dec,
-      $bonus_fix,
-      $flag,
-      $hint,
-      $penalty,
-      0, // active
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+      [$type, $title, $description, $ent_id, $category_id, $points, $bonus, $bonus_dec, $bonus_fix, $flag, $hint, $penalty, 0],
     );
 
     // Mark entity as used
-    await Country::genSetUsed($ent_id, true);
+    Country::setUsed($ent_id, true);
 
     // Return the newly created level_id
-    $result =
-      await $db->queryf(
-        'SELECT id FROM levels WHERE title = %s AND description = %s AND entity_id = %d AND flag = %s AND category_id = %d LIMIT 1',
-        $title,
-        $description,
-        $ent_id,
-        $flag,
-        $category_id,
-      );
+    $result = $db->query(
+      'SELECT id FROM levels WHERE title = ? AND description = ? AND entity_id = ? AND flag = ? AND category_id = ? LIMIT 1',
+      [$title, $description, $ent_id, $flag, $category_id],
+    );
 
     self::invalidateMCRecords();
-    invariant($result->numRows() === 1, 'Expected exactly one result');
+    if (!($result->rowCount() === 1)) { throw new RuntimeException('Expected exactly one result'); }
 
-    $country_id = await self::genCountryIdForLevel(
-      intval(must_have_idx($result->mapRows()[0], 'id')),
-    );
-    $country = await Country::gen($country_id);
-    await \HH\Asio\va(
-      Announcement::genCreateAuto($country->getName()." added!"),
-      ActivityLog::genAdminLog("added", "Country", $country_id),
-    );
+    $row = $result->fetch();
+    $new_level_id = intval(must_have_idx($row, 'id'));
+
+    $country_id = self::countryIdForLevel($new_level_id);
+    $country = Country::get($country_id);
+    Announcement::createAuto($country->getName()." added!");
+    ActivityLog::adminLog("added", "Country", $country_id);
 
     ActivityLog::invalidateMCRecords('ALL_ACTIVITY');
 
-    return intval(must_have_idx($result->mapRows()[0], 'id'));
+    return $new_level_id;
   }
 
   // Create a flag level.
-  public static async function genCreateFlag(
+  public static function createFlag(
     string $title,
     string $description,
     string $flag,
@@ -418,8 +376,8 @@ class Level extends Model implements Importable, Exportable {
     int $bonus_dec,
     string $hint,
     int $penalty,
-  ): Awaitable<int> {
-    return await self::genCreate(
+  ): int {
+    return self::create(
       'flag',
       $title,
       $description,
@@ -436,7 +394,7 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Update a flag level.
-  public static async function genUpdateFlag(
+  public static function updateFlag(
     string $title,
     string $description,
     string $flag,
@@ -448,8 +406,8 @@ class Level extends Model implements Importable, Exportable {
     string $hint,
     int $penalty,
     int $level_id,
-  ): Awaitable<void> {
-    await self::genUpdate(
+  ): void {
+    self::update(
       $title,
       $description,
       $entity_id,
@@ -466,7 +424,7 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Create a quiz level.
-  public static async function genCreateQuiz(
+  public static function createQuiz(
     string $title,
     string $question,
     string $answer,
@@ -476,16 +434,16 @@ class Level extends Model implements Importable, Exportable {
     int $bonus_dec,
     string $hint,
     int $penalty,
-  ): Awaitable<int> {
-    $db = await self::genDb();
+  ): int {
+    $db = Db::getInstance();
 
-    $result = await $db->queryf(
-      'SELECT id FROM categories WHERE category = %s LIMIT 1',
-      'Quiz',
+    $result = $db->query(
+      'SELECT id FROM categories WHERE category = ? LIMIT 1',
+      ['Quiz'],
     );
 
-    $category_id = intval(must_have_idx($result->mapRows()[0], 'id'));
-    return await self::genCreate(
+    $category_id = intval(must_have_idx($result->fetch(), 'id'));
+    return self::create(
       'quiz',
       $title,
       $question,
@@ -502,7 +460,7 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Update a quiz level.
-  public static async function genUpdateQuiz(
+  public static function updateQuiz(
     string $title,
     string $question,
     string $answer,
@@ -513,16 +471,16 @@ class Level extends Model implements Importable, Exportable {
     string $hint,
     int $penalty,
     int $level_id,
-  ): Awaitable<void> {
-    $db = await self::genDb();
+  ): void {
+    $db = Db::getInstance();
 
-    $result = await $db->queryf(
-      'SELECT id FROM categories WHERE category = %s LIMIT 1',
-      'Quiz',
+    $result = $db->query(
+      'SELECT id FROM categories WHERE category = ? LIMIT 1',
+      ['Quiz'],
     );
 
-    $category_id = intval(must_have_idx($result->mapRows()[0], 'id'));
-    await self::genUpdate(
+    $category_id = intval(must_have_idx($result->fetch(), 'id'));
+    self::update(
       $title,
       $question,
       $entity_id,
@@ -539,7 +497,7 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Create a base level.
-  public static async function genCreateBase(
+  public static function createBase(
     string $title,
     string $description,
     int $entity_id,
@@ -548,8 +506,8 @@ class Level extends Model implements Importable, Exportable {
     int $bonus,
     string $hint,
     int $penalty,
-  ): Awaitable<int> {
-    return await self::genCreate(
+  ): int {
+    return self::create(
       'base',
       $title,
       $description,
@@ -566,7 +524,7 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Update a base level.
-  public static async function genUpdateBase(
+  public static function updateBase(
     string $title,
     string $description,
     int $entity_id,
@@ -576,8 +534,8 @@ class Level extends Model implements Importable, Exportable {
     string $hint,
     int $penalty,
     int $level_id,
-  ): Awaitable<void> {
-    await self::genUpdate(
+  ): void {
+    self::update(
       $title,
       $description,
       $entity_id,
@@ -594,7 +552,7 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Update level.
-  public static async function genUpdate(
+  public static function update(
     string $title,
     string $description,
     int $entity_id,
@@ -607,96 +565,74 @@ class Level extends Model implements Importable, Exportable {
     string $hint,
     int $penalty,
     int $level_id,
-  ): Awaitable<void> {
-    $db = await self::genDb();
+  ): void {
+    $db = Db::getInstance();
 
     if ($entity_id === 0) {
-      $ent_id = await Country::genRandomAvailableCountryId();
+      $ent_id = Country::randomAvailableCountryId();
     } else {
       $ent_id = $entity_id;
     }
 
-    $result =
-      await $db->queryf(
-        'UPDATE levels SET title = %s, description = %s, entity_id = %d, category_id = %d, points = %d, '.
-        'bonus = %d, bonus_dec = %d, bonus_fix = %d, flag = %s, hint = %s, '.
-        'penalty = %d WHERE id = %d LIMIT 1',
-        $title,
-        $description,
-        $ent_id,
-        $category_id,
-        $points,
-        $bonus,
-        $bonus_dec,
-        $bonus_fix,
-        $flag,
-        $hint,
-        $penalty,
-        $level_id,
-      );
+    $result = $db->query(
+      'UPDATE levels SET title = ?, description = ?, entity_id = ?, category_id = ?, points = ?, '.
+      'bonus = ?, bonus_dec = ?, bonus_fix = ?, flag = ?, hint = ?, '.
+      'penalty = ? WHERE id = ? LIMIT 1',
+      [$title, $description, $ent_id, $category_id, $points, $bonus, $bonus_dec, $bonus_fix, $flag, $hint, $penalty, $level_id],
+    );
 
     // Make sure entities are consistent
-    await Country::genUsedAdjust();
+    Country::usedAdjust();
 
-    if ($result->numRowsAffected() > 0) {
-      $country_id = await self::genCountryIdForLevel($level_id);
-      $country = await Country::gen($country_id);
-      await \HH\Asio\va(
-        ActivityLog::genAdminLog("updated", "Country", $country_id),
-        Announcement::genCreateAuto($country->getName()." updated!"),
-      );
+    if ($result->rowCount() > 0) {
+      $country_id = self::countryIdForLevel($level_id);
+      $country = Country::get($country_id);
+      ActivityLog::adminLog("updated", "Country", $country_id);
+      Announcement::createAuto($country->getName()." updated!");
       self::invalidateMCRecords(); // Invalidate Memcached Level data.
       ActivityLog::invalidateMCRecords('ALL_ACTIVITY'); // Invalidate Memcached ActivityLog data.
     }
   }
 
   // Delete level.
-  public static async function genDelete(int $level_id): Awaitable<void> {
-    $db = await self::genDb();
+  public static function delete(int $level_id): void {
+    $db = Db::getInstance();
 
     // Free country first.
-    $level = await self::gen($level_id);
-    await Country::genSetUsed($level->getEntityId(), false);
+    $level = self::get($level_id);
+    Country::setUsed($level->getEntityId(), false);
 
     // Remove team points for level
-    $scores = await ScoreLog::genAllScoresByLevel($level_id);
-    $level_delete_queries = Vector {};
+    $scores = ScoreLog::allScoresByLevel($level_id);
+    $level_delete_queries = [];
     foreach ($scores as $score) {
       $team_id = $score->getTeamId();
       $points = $score->getPoints();
-      $level_delete_queries->add(
-        sprintf(
-          'UPDATE teams SET points = points - %d WHERE id = %d',
-          $points,
-          $team_id,
-        ),
+      $level_delete_queries[] = sprintf(
+        'UPDATE teams SET points = points - %d WHERE id = %d',
+        $points,
+        $team_id,
       );
     }
 
     // Remove hint penalties from teams points for level
-    $hints = await HintLog::genAllHintsByLevel($level_id);
+    $hints = HintLog::allHintsByLevel($level_id);
     foreach ($hints as $hint) {
       $team_id = $hint->getTeamId();
       $penalty = $hint->getPenalty();
-      $level_delete_queries->add(
-        sprintf(
-          'UPDATE teams SET points = points + %d WHERE id = %d',
-          $penalty,
-          $team_id,
-        ),
+      $level_delete_queries[] = sprintf(
+        'UPDATE teams SET points = points + %d WHERE id = %d',
+        $penalty,
+        $team_id,
       );
     }
 
     // Delete all references to level
-    $level_delete_queries->addAll(
-      Set {
-        sprintf('DELETE FROM levels WHERE id = %d LIMIT 1', $level_id),
-        sprintf('DELETE FROM hints_log WHERE level_id = %d', $level_id),
-        sprintf('DELETE FROM scores_log WHERE level_id = %d', $level_id),
-        sprintf('DELETE FROM failures_log WHERE level_id = %d', $level_id),
-      },
-    );
-    await $db->multiQuery($level_delete_queries);
+    $level_delete_queries[] = sprintf('DELETE FROM levels WHERE id = %d LIMIT 1', $level_id);
+    $level_delete_queries[] = sprintf('DELETE FROM hints_log WHERE level_id = %d', $level_id);
+    $level_delete_queries[] = sprintf('DELETE FROM scores_log WHERE level_id = %d', $level_id);
+    $level_delete_queries[] = sprintf('DELETE FROM failures_log WHERE level_id = %d', $level_id);
+    $db->multiQuery($level_delete_queries);
 
     self::invalidateMCRecords();
     Control::invalidateMCRecords();
@@ -706,178 +642,148 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Enable or disable level by passing 1 or 0.
-  public static async function genSetStatus(
+  public static function setStatus(
     int $level_id,
     bool $active,
-  ): Awaitable<void> {
-    $db = await self::genDb();
+  ): void {
+    $db = Db::getInstance();
 
-    $result = await $db->queryf(
-      'UPDATE levels SET active = %d WHERE id = %d LIMIT 1',
-      (int) $active,
-      $level_id,
+    $result = $db->query(
+      'UPDATE levels SET active = ? WHERE id = ? LIMIT 1',
+      [(int) $active, $level_id],
     );
 
-    if ($result->numRowsAffected() > 0) {
+    if ($result->rowCount() > 0) {
       $action = ($active === true) ? "enabled" : "disabled";
-      $country_id = await self::genCountryIdForLevel($level_id);
-      $country = await Country::gen($country_id);
-      await \HH\Asio\va(
-        ActivityLog::genAdminLog($action, "Country", $country_id),
-        Announcement::genCreateAuto($country->getName().' '.$action.'!'),
-      );
+      $country_id = self::countryIdForLevel($level_id);
+      $country = Country::get($country_id);
+      ActivityLog::adminLog($action, "Country", $country_id);
+      Announcement::createAuto($country->getName().' '.$action.'!');
       self::invalidateMCRecords();
       ActivityLog::invalidateMCRecords('ALL_ACTIVITY');
     }
   }
 
   // Enable or disable levels by type.
-  public static async function genSetStatusType(
+  public static function setStatusType(
     bool $active,
     string $type,
-  ): Awaitable<void> {
-    $db = await self::genDb();
+  ): void {
+    $db = Db::getInstance();
 
-    $results = await $db->queryf(
-      'UPDATE levels SET active = %d WHERE type = %s',
-      (int) $active,
-      $type,
+    $results = $db->query(
+      'UPDATE levels SET active = ? WHERE type = ?',
+      [(int) $active, $type],
     );
 
-    if ($results->numRowsAffected() > 0) {
+    if ($results->rowCount() > 0) {
       self::invalidateMCRecords();
     }
   }
 
   // Enable or disable all levels.
-  public static async function genSetStatusAll(
+  public static function setStatusAll(
     bool $active,
     string $type,
-  ): Awaitable<void> {
-    $db = await self::genDb();
+  ): void {
+    $db = Db::getInstance();
 
     if ($type === 'all') {
-      $result = await $db->queryf(
-        'SELECT id FROM levels WHERE active = %d AND id >0',
-        (int) !$active,
+      $result = $db->query(
+        'SELECT id FROM levels WHERE active = ? AND id >0',
+        [(int) !$active],
       );
     } else {
-      $result = await $db->queryf(
-        'SELECT id FROM levels WHERE active = %d AND type = %s',
-        (int) !$active,
-        $type,
+      $result = $db->query(
+        'SELECT id FROM levels WHERE active = ? AND type = ?',
+        [(int) !$active, $type],
       );
     }
-    foreach ($result->mapRows() as $row) {
-      await self::genSetStatus(intval($row->get('id')), $active); // TODO: Combine Awaits
+    foreach ($result->fetchAll() as $row) {
+      self::setStatus(intval($row['id']), $active);
     }
   }
 
   // All levels.
-  public static async function genAllLevels(
+  public static function allLevels(
     bool $refresh = false,
-  ): Awaitable<array<Level>> {
+  ): array {
     $mc_result = self::getMCRecords('ALL_LEVELS');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $all_levels = Map {};
-      $result = await $db->queryf('SELECT * FROM levels ORDER BY id');
-      foreach ($result->mapRows() as $row) {
-        $all_levels->add(
-          Pair {intval($row->get('id')), self::levelFromRow($row)},
-        );
+      $db = Db::getInstance();
+      $all_levels = [];
+      $result = $db->query('SELECT * FROM levels ORDER BY id', []);
+      foreach ($result->fetchAll() as $row) {
+        $all_levels[intval($row['id'])] = self::levelFromRow($row);
       }
-      self::setMCRecords('ALL_LEVELS', new Map($all_levels));
-      $levels = array();
-      $levels = $all_levels->toValuesArray();
-      return $levels;
+      self::setMCRecords('ALL_LEVELS', $all_levels);
+      return array_values($all_levels);
     } else {
-      $levels = array();
-      invariant(
-        $mc_result instanceof Map,
-        'cache return should be of type Map',
-      );
-      $levels = $mc_result->toValuesArray();
-      return $levels;
+      if (!is_array($mc_result)) { throw new RuntimeException('cache return should be of type array'); }
+      return array_values($mc_result);
     }
   }
 
-  public static async function genAllLevelsCountryMap(
+  public static function allLevelsCountryMap(
     bool $refresh = false,
-  ): Awaitable<Map<int, Level>> {
+  ): array {
     $mc_result = self::getMCRecords('ALL_LEVELS_COUNTRY_MAP');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $all_levels = Map {};
-      $result = await $db->queryf('SELECT * FROM levels ORDER BY id');
-      foreach ($result->mapRows() as $row) {
-        $all_levels->add(
-          Pair {intval($row->get('entity_id')), self::levelFromRow($row)},
-        );
+      $db = Db::getInstance();
+      $all_levels = [];
+      $result = $db->query('SELECT * FROM levels ORDER BY id', []);
+      foreach ($result->fetchAll() as $row) {
+        $all_levels[intval($row['entity_id'])] = self::levelFromRow($row);
       }
-      self::setMCRecords('ALL_LEVELS_COUNTRY_MAP', new Map($all_levels));
+      self::setMCRecords('ALL_LEVELS_COUNTRY_MAP', $all_levels);
       return $all_levels;
     } else {
-      $levels = array();
-      invariant(
-        $mc_result instanceof Map,
-        'cache return should be of type Map',
-      );
+      if (!is_array($mc_result)) { throw new RuntimeException('cache return should be of type array'); }
       return $mc_result;
     }
   }
 
   // All levels by status.
-  public static async function genAllActiveLevels(
+  public static function allActiveLevels(
     bool $refresh = false,
-  ): Awaitable<array<Level>> {
+  ): array {
     $mc_result = self::getMCRecords('ALL_ACTIVE_LEVELS');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $active_levels = Map {};
-      $result = await $db->queryf(
+      $db = Db::getInstance();
+      $active_levels = [];
+      $result = $db->query(
         'SELECT * FROM levels WHERE active = 1 ORDER BY id',
+        [],
       );
-      foreach ($result->mapRows() as $row) {
-        $active_levels->add(
-          Pair {intval($row->get('id')), self::levelFromRow($row)},
-        );
+      foreach ($result->fetchAll() as $row) {
+        $active_levels[intval($row['id'])] = self::levelFromRow($row);
       }
       self::setMCRecords('ALL_ACTIVE_LEVELS', $active_levels);
-      $levels = array();
-      $levels = $active_levels->toValuesArray();
-      return $levels;
+      return array_values($active_levels);
     } else {
-      $levels = array();
-      invariant(
-        $mc_result instanceof Map,
-        'cache return should be of type Map',
-      );
-      $levels = $mc_result->toValuesArray();
-      return $levels;
+      if (!is_array($mc_result)) { throw new RuntimeException('cache return should be of type array'); }
+      return array_values($mc_result);
     }
   }
 
   // All levels by status.
-  public static async function genAllActiveBases(
+  public static function allActiveBases(
     bool $refresh = false,
-  ): Awaitable<array<Level>> {
+  ): array {
     $mc_result = self::getMCRecords('ALL_ACTIVE_LEVELS');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $active_levels = Map {};
-      $result = await $db->queryf(
+      $db = Db::getInstance();
+      $active_levels = [];
+      $result = $db->query(
         'SELECT * FROM levels WHERE active = 1 ORDER BY id',
+        [],
       );
-      foreach ($result->mapRows() as $row) {
-        $active_levels->add(
-          Pair {intval($row->get('id')), self::levelFromRow($row)},
-        );
+      foreach ($result->fetchAll() as $row) {
+        $active_levels[intval($row['id'])] = self::levelFromRow($row);
       }
       self::setMCRecords('ALL_ACTIVE_LEVELS', $active_levels);
-      $levels = array();
-      $levels = $active_levels->toValuesArray();
-      $bases = array();
+      $levels = array_values($active_levels);
+      $bases = [];
       foreach ($levels as $level) {
         if ($level->type === 'base') {
           $bases[] = $level;
@@ -885,13 +791,9 @@ class Level extends Model implements Importable, Exportable {
       }
       return $bases;
     } else {
-      $levels = array();
-      invariant(
-        $mc_result instanceof Map,
-        'cache return should be of type Map',
-      );
-      $levels = $mc_result->toValuesArray();
-      $bases = array();
+      if (!is_array($mc_result)) { throw new RuntimeException('cache return should be of type array'); }
+      $levels = array_values($mc_result);
+      $bases = [];
       foreach ($levels as $level) {
         if ($level->type === 'base') {
           $bases[] = $level;
@@ -902,24 +804,21 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // All levels by type.
-  public static async function genAllTypeLevels(
+  public static function allTypeLevels(
     string $type,
     bool $refresh = false,
-  ): Awaitable<array<Level>> {
+  ): array {
     $mc_result = self::getMCRecords('ALL_LEVELS');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $all_levels = Map {};
-      $result = await $db->queryf('SELECT * FROM levels ORDER BY id');
-      foreach ($result->mapRows() as $row) {
-        $all_levels->add(
-          Pair {intval($row->get('id')), self::levelFromRow($row)},
-        );
+      $db = Db::getInstance();
+      $all_levels = [];
+      $result = $db->query('SELECT * FROM levels ORDER BY id', []);
+      foreach ($result->fetchAll() as $row) {
+        $all_levels[intval($row['id'])] = self::levelFromRow($row);
       }
       self::setMCRecords('ALL_LEVELS', $all_levels);
-      $levels = array();
-      $levels = $all_levels->toValuesArray();
-      $type_levels = array();
+      $levels = array_values($all_levels);
+      $type_levels = [];
       foreach ($levels as $level) {
         if ($level->type === $type) {
           $type_levels[] = $level;
@@ -927,13 +826,9 @@ class Level extends Model implements Importable, Exportable {
       }
       return $type_levels;
     } else {
-      $levels = array();
-      invariant(
-        $mc_result instanceof Map,
-        'cache return should be of type Map',
-      );
-      $levels = $mc_result->toValuesArray();
-      $type_levels = array();
+      if (!is_array($mc_result)) { throw new RuntimeException('cache return should be of type array'); }
+      $levels = array_values($mc_result);
+      $type_levels = [];
       foreach ($levels as $level) {
         if ($level->type === $type) {
           $type_levels[] = $level;
@@ -944,65 +839,53 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // All quiz levels.
-  public static async function genAllQuizLevels(): Awaitable<array<Level>> {
-    return await self::genAllTypeLevels('quiz');
+  public static function allQuizLevels(): array {
+    return self::allTypeLevels('quiz');
   }
 
   // All base levels.
-  public static async function genAllBaseLevels(): Awaitable<array<Level>> {
-    return await self::genAllTypeLevels('base');
+  public static function allBaseLevels(): array {
+    return self::allTypeLevels('base');
   }
 
   // All flag levels.
-  public static async function genAllFlagLevels(): Awaitable<array<Level>> {
-    return await self::genAllTypeLevels('flag');
+  public static function allFlagLevels(): array {
+    return self::allTypeLevels('flag');
   }
 
   // Get a single level.
-  public static async function gen(
+  public static function get(
     int $level_id,
     bool $refresh = false,
-  ): Awaitable<Level> {
+  ): Level {
     $mc_result = self::getMCRecords('ALL_LEVELS');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $all_levels = Map {};
-      $result = await $db->queryf('SELECT * FROM levels ORDER BY id');
-      foreach ($result->mapRows() as $row) {
-        $all_levels->add(
-          Pair {intval($row->get('id')), self::levelFromRow($row)},
-        );
+      $db = Db::getInstance();
+      $all_levels = [];
+      $result = $db->query('SELECT * FROM levels ORDER BY id', []);
+      foreach ($result->fetchAll() as $row) {
+        $all_levels[intval($row['id'])] = self::levelFromRow($row);
       }
       self::setMCRecords('ALL_LEVELS', $all_levels);
-      invariant(
-        $all_levels->contains($level_id) !== false,
-        'level not found',
-      );
-      invariant(
-        $all_levels->contains($level_id) !== false,
-        'level not found',
-      );
-      $level = $all_levels->get($level_id);
-      invariant($level instanceof Level, 'level should be of type Level');
+      if (!array_key_exists($level_id, $all_levels)) { throw new RuntimeException('level not found'); }
+      $level = $all_levels[$level_id];
+      if (!($level instanceof Level)) { throw new RuntimeException('level should be of type Level'); }
       return $level;
     } else {
-      invariant(
-        $mc_result instanceof Map,
-        'cache return should be of type Map',
-      );
-      invariant($mc_result->contains($level_id) !== false, 'level not found');
-      $level = $mc_result->get($level_id);
-      invariant($level instanceof Level, 'level should be of type Level');
+      if (!is_array($mc_result)) { throw new RuntimeException('cache return should be of type array'); }
+      if (!array_key_exists($level_id, $mc_result)) { throw new RuntimeException('level not found'); }
+      $level = $mc_result[$level_id];
+      if (!($level instanceof Level)) { throw new RuntimeException('level should be of type Level'); }
       return $level;
     }
   }
 
   // Check if flag is correct.
-  public static async function genCheckAnswer(
+  public static function checkAnswer(
     int $level_id,
     string $answer,
-  ): Awaitable<bool> {
-    $level = await self::gen($level_id);
+  ): bool {
+    $level = self::get($level_id);
     $type = $level->getType();
     if ($type === "flag") {
       return trim($level->getFlag()) === trim($answer); // case sensitive
@@ -1013,40 +896,38 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Adjust bonus.
-  public static async function genAdjustBonus(int $level_id): Awaitable<void> {
-    $db = await self::genDb();
+  public static function adjustBonus(int $level_id): void {
+    $db = Db::getInstance();
 
-    await $db->queryf(
-      'UPDATE levels SET bonus = GREATEST(bonus - bonus_dec, 0) WHERE id = %d LIMIT 1',
-      $level_id,
+    $db->query(
+      'UPDATE levels SET bonus = GREATEST(bonus - bonus_dec, 0) WHERE id = ? LIMIT 1',
+      [$level_id],
     );
 
     self::invalidateMCRecords(); // Invalidate Memcached Level data.
   }
 
   // Log base request.
-  public static async function genLogBaseEntry(
+  public static function logBaseEntry(
     int $level_id,
     int $code,
     string $response,
-  ): Awaitable<void> {
-    $db = await self::genDb();
+  ): void {
+    $db = Db::getInstance();
 
-    await $db->queryf(
-      'INSERT INTO bases_log (ts, level_id, code, response) VALUES (NOW(), %d, %d, %s)',
-      $level_id,
-      $code,
-      $response,
+    $db->query(
+      'INSERT INTO bases_log (ts, level_id, code, response) VALUES (NOW(), ?, ?, ?)',
+      [$level_id, $code, $response],
     );
 
     self::invalidateMCRecords(); // Invalidate Memcached Level data.
   }
 
-  private static async function withLock(
+  private static function withLock(
     string $lock_name,
     int $team_id,
-    (function(): Awaitable<mixed>) $thunk,
-  ): Awaitable<mixed> {
+    callable $thunk,
+  ): mixed {
     $lock_name =
       sprintf('%s/%s_%d', sys_get_temp_dir(), $lock_name, $team_id);
     $lock = fopen($lock_name, 'w');
@@ -1060,7 +941,7 @@ class Level extends Model implements Importable, Exportable {
       return null;
     }
 
-    $result = await $thunk();
+    $result = $thunk();
 
     // Release the scoring lock
     flock($lock, LOCK_UN);
@@ -1070,31 +951,31 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Score level. Works for quiz and flags.
-  public static async function genScoreLevel(
+  public static function scoreLevel(
     int $level_id,
     int $team_id,
-  ): Awaitable<bool> {
+  ): bool {
     $result =
-      await self::withLock(
+      self::withLock(
         'score_level_lock',
         $team_id,
-        async function(): Awaitable<mixed> use ($level_id, $team_id) {
-          $db = await self::genDb();
+        function() use ($level_id, $team_id) {
+          $db = Db::getInstance();
 
           // Check if team has already scored this level
           $previous_score =
-            await ScoreLog::genAllPreviousScore($level_id, $team_id, false);
+            ScoreLog::allPreviousScore($level_id, $team_id, false);
           if ($previous_score) {
             return false;
           }
 
-          $level = await self::gen($level_id);
+          $level = self::get($level_id);
 
           // Calculate points to give
           $points = $level->getPoints() + $level->getBonus();
 
           // Log the score
-          $captured = await ScoreLog::genLogValidScore(
+          $captured = ScoreLog::logValidScore(
             $level_id,
             $team_id,
             $points,
@@ -1103,13 +984,12 @@ class Level extends Model implements Importable, Exportable {
 
           if ($captured === true) {
             // Adjust bonus
-            await self::genAdjustBonus($level_id);
+            self::adjustBonus($level_id);
 
             // Score!
-            await $db->queryf(
-              'UPDATE teams SET points = points + %d, last_score = NOW() WHERE id = %d LIMIT 1',
-              $points,
-              $team_id,
+            $db->query(
+              'UPDATE teams SET points = points + ?, last_score = NOW() WHERE id = ? LIMIT 1',
+              [$points, $team_id],
             );
           }
 
@@ -1123,22 +1003,22 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Score base.
-  public static async function genScoreBase(
+  public static function scoreBase(
     int $level_id,
     int $team_id,
-  ): Awaitable<bool> {
+  ): bool {
     $result =
-      await self::withLock(
+      self::withLock(
         'score_base_lock',
         $team_id,
-        async function(): Awaitable<mixed> use ($level_id, $team_id) {
-          $db = await self::genDb();
+        function() use ($level_id, $team_id) {
+          $db = Db::getInstance();
 
-          $level = await self::gen($level_id);
+          $level = self::get($level_id);
 
           // Calculate points to give
           $score =
-            await ScoreLog::genAllPreviousScore($level_id, $team_id, false);
+            ScoreLog::allPreviousScore($level_id, $team_id, false);
           if ($score) {
             $points = $level->getPoints();
           } else {
@@ -1146,14 +1026,13 @@ class Level extends Model implements Importable, Exportable {
           }
 
           // Score!
-          await $db->queryf(
-            'UPDATE teams SET points = points + %d, last_score = NOW() WHERE id = %d LIMIT 1',
-            $points,
-            $team_id,
+          $db->query(
+            'UPDATE teams SET points = points + ?, last_score = NOW() WHERE id = ? LIMIT 1',
+            [$points, $team_id],
           );
 
           // Log the score...
-          await ScoreLog::genLogValidScore(
+          ScoreLog::logValidScore(
             $level_id,
             $team_id,
             $points,
@@ -1170,51 +1049,46 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Get hint.
-  public static async function genLevelHint(
+  public static function levelHint(
     int $level_id,
     int $team_id,
-  ): Awaitable<?string> {
+  ): ?string {
     $result =
-      await self::withLock(
+      self::withLock(
         'hint_lock',
         $team_id,
-        async function(): Awaitable<mixed> use ($level_id, $team_id) {
-          $db = await self::genDb();
+        function() use ($level_id, $team_id) {
+          $db = Db::getInstance();
 
-          $level = await self::gen($level_id);
+          $level = self::get($level_id);
           $penalty = $level->getPenalty();
 
           // Check if team has already gotten this hint or if the team has scored this already
           // If so, hint is free
-          list($hint, $score) = await \HH\Asio\va(
-            HintLog::genPreviousHint($level_id, $team_id, false),
-            ScoreLog::genAllPreviousScore($level_id, $team_id, false),
-          );
+          $hint = HintLog::previousHint($level_id, $team_id, false);
+          $score = ScoreLog::allPreviousScore($level_id, $team_id, false);
           if ($hint || $score) {
             $penalty = 0;
           }
 
           // Make sure team has enough points to pay
-          $team = await MultiTeam::genTeam($team_id);
+          $team = MultiTeam::team($team_id);
           if ($team->getPoints() < $penalty) {
             return null;
           }
 
           // Adjust points and log the hint
-          await \HH\Asio\va(
-            $db->queryf(
-              'UPDATE teams SET points = points - %d WHERE id = %d LIMIT 1',
-              $penalty,
-              $team_id,
-            ),
-            HintLog::genLogGetHint($level_id, $team_id, $penalty),
+          $db->query(
+            'UPDATE teams SET points = points - ? WHERE id = ? LIMIT 1',
+            [$penalty, $team_id],
           );
+          HintLog::logGetHint($level_id, $team_id, $penalty);
 
           ActivityLog::invalidateMCRecords('ALL_ACTIVITY'); // Invalidate Memcached ActivityLog data.
           MultiTeam::invalidateMCRecords('ALL_TEAMS'); // Invalidate Memcached MultiTeam data.
           MultiTeam::invalidateMCRecords('POINTS_BY_TYPE'); // Invalidate Memcached MultiTeam data.
           MultiTeam::invalidateMCRecords('LEADERBOARD'); // Invalidate Memcached MultiTeam data.
-          $completed_level = await MultiTeam::genCompletedLevel($level_id);
+          $completed_level = MultiTeam::completedLevel($level_id);
           if (count($completed_level) === 0) {
             MultiTeam::invalidateMCRecords('TEAMS_FIRST_CAP'); // Invalidate Memcached MultiTeam data.
           }
@@ -1229,8 +1103,8 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Get the IP from a base level.
-  public static async function genBaseIP(int $base_id): Awaitable<string> {
-    $links = await Link::genAllLinks($base_id);
+  public static function baseIP(int $base_id): string {
+    $links = Link::allLinks($base_id);
     $link = $links[0];
     $ip = explode(':', $link->getLink())[0];
 
@@ -1239,11 +1113,11 @@ class Level extends Model implements Importable, Exportable {
 
   // Request all bases
   public static function getBasesResponses(
-    array<int, array<string, mixed>> $bases,
-  ): array<int, string> {
+    array $bases,
+  ): array {
     // Iterates and request all the bases endpoints for owner
-    $responses = array();
-    $curl_handlers = array();
+    $responses = [];
+    $curl_handlers = [];
     $multi_handler = curl_multi_init();
 
     // Create the list of request handlers
@@ -1267,10 +1141,10 @@ class Level extends Model implements Importable, Exportable {
 
     // Get responses and remove handlers
     foreach ($curl_handlers as $id => $c) {
-      $r = array(
+      $r = [
         'id' => intval($id),
         'response' => curl_multi_getcontent($c),
-      );
+      ];
       curl_multi_remove_handle($multi_handler, $c);
       array_push($responses, $r);
     }
@@ -1282,156 +1156,142 @@ class Level extends Model implements Importable, Exportable {
   }
 
   // Bases processing and scoring.
-  public static async function genBaseScoring(): Awaitable<void> {
+  public static function baseScoring(): void {
     $document_root = must_have_string(Utils::getSERVER(), 'DOCUMENT_ROOT');
     $cmd =
       'hhvm -vRepo.Central.Path=/var/run/hhvm/.hhvm.hhbc_bases '.
       $document_root.
       '/scripts/bases.php > /dev/null 2>&1 & echo $!';
     $pid = shell_exec($cmd);
-    await Control::genStartScriptLog(intval($pid), 'bases', $cmd);
+    Control::startScriptLog(intval($pid), 'bases', $cmd);
   }
 
   // Stop bases processing and scoring process.
-  public static async function genStopBaseScoring(): Awaitable<void> {
+  public static function stopBaseScoring(): void {
     // Kill running process
-    $pid = await Control::genScriptPid('bases');
+    $pid = Control::scriptPid('bases');
     if ($pid > 0) {
       exec('kill -9 '.escapeshellarg(strval($pid)));
     }
     // Mark process as stopped
-    await Control::genStopScriptLog($pid);
+    Control::stopScriptLog($pid);
   }
 
   // Check if a level already exists by type, title and entity.
-  public static async function genAlreadyExist(
+  public static function alreadyExist(
     string $type,
     string $title,
     string $entity_iso_code,
-  ): Awaitable<bool> {
-    $db = await self::genDb();
+  ): bool {
+    $db = Db::getInstance();
 
-    $result =
-      await $db->queryf(
-        'SELECT COUNT(*) FROM levels WHERE type = %s AND title = %s AND entity_id IN (SELECT id FROM countries WHERE iso_code = %s)',
-        $type,
-        $title,
-        $entity_iso_code,
-      );
-
-    if ($result->numRows() > 0) {
-      invariant($result->numRows() === 1, 'Expected exactly one result');
-      return (intval(idx($result->mapRows()[0], 'COUNT(*)')) > 0);
-    } else {
-      return false;
-    }
-  }
-
-  // Check if a level already exists by type, title and entity.
-  public static async function genAlreadyExistById(
-    int $level_id,
-  ): Awaitable<bool> {
-    $db = await self::genDb();
-
-    $result = await $db->queryf(
-      'SELECT COUNT(*) FROM levels WHERE id = %d',
-      $level_id,
+    $result = $db->query(
+      'SELECT COUNT(*) FROM levels WHERE type = ? AND title = ? AND entity_id IN (SELECT id FROM countries WHERE iso_code = ?)',
+      [$type, $title, $entity_iso_code],
     );
 
-    if ($result->numRows() > 0) {
-      invariant($result->numRows() === 1, 'Expected exactly one result');
-      return (intval(idx($result->mapRows()[0], 'COUNT(*)')) > 0);
+    if ($result->rowCount() > 0) {
+      if (!($result->rowCount() === 1)) { throw new RuntimeException('Expected exactly one result'); }
+      return (intval(idx($result->fetch(), 'COUNT(*)')) > 0);
     } else {
       return false;
     }
   }
 
   // Check if a level already exists by type, title and entity.
-  public static async function genCountryIdForLevel(
+  public static function alreadyExistById(
     int $level_id,
-  ): Awaitable<int> {
-    $level = await self::gen($level_id);
+  ): bool {
+    $db = Db::getInstance();
+
+    $result = $db->query(
+      'SELECT COUNT(*) FROM levels WHERE id = ?',
+      [$level_id],
+    );
+
+    if ($result->rowCount() > 0) {
+      if (!($result->rowCount() === 1)) { throw new RuntimeException('Expected exactly one result'); }
+      return (intval(idx($result->fetch(), 'COUNT(*)')) > 0);
+    } else {
+      return false;
+    }
+  }
+
+  // Check if a level already exists by type, title and entity.
+  public static function countryIdForLevel(
+    int $level_id,
+  ): int {
+    $level = self::get($level_id);
     return $level->getEntityId();
   }
 
-  public static async function getLevelIdByTypeTitleCountry(
+  public static function getLevelIdByTypeTitleCountry(
     string $type,
     string $title,
     string $entity_iso_code,
-  ): Awaitable<int> {
-    $db = await self::genDb();
+  ): int {
+    $db = Db::getInstance();
 
-    $result =
-      await $db->queryf(
-        'SELECT id FROM levels WHERE type = %s AND title = %s AND entity_id IN (SELECT id FROM countries WHERE iso_code = %s)',
-        $type,
-        $title,
-        $entity_iso_code,
-      );
+    $result = $db->query(
+      'SELECT id FROM levels WHERE type = ? AND title = ? AND entity_id IN (SELECT id FROM countries WHERE iso_code = ?)',
+      [$type, $title, $entity_iso_code],
+    );
 
-    invariant($result->numRows() === 1, 'Expected exactly one result');
-    return intval(must_have_idx($result->mapRows()[0], 'id'));
+    if (!($result->rowCount() === 1)) { throw new RuntimeException('Expected exactly one result'); }
+    return intval(must_have_idx($result->fetch(), 'id'));
   }
 
-  public static async function genAlreadyExistUnknownCountry(
+  public static function alreadyExistUnknownCountry(
     string $type,
     string $title,
     string $description,
     int $points,
-  ): Awaitable<bool> {
-    $db = await self::genDb();
-    $result =
-      await $db->queryf(
-        'SELECT COUNT(*) FROM levels WHERE type = %s AND title = %s AND description = %s AND points = %d',
-        $type,
-        $title,
-        $description,
-        $points,
-      );
-    if ($result->numRows() > 0) {
-      invariant($result->numRows() === 1, 'Expected exactly one result');
-      return (intval(idx($result->mapRows()[0], 'COUNT(*)')) > 0);
+  ): bool {
+    $db = Db::getInstance();
+    $result = $db->query(
+      'SELECT COUNT(*) FROM levels WHERE type = ? AND title = ? AND description = ? AND points = ?',
+      [$type, $title, $description, $points],
+    );
+    if ($result->rowCount() > 0) {
+      if (!($result->rowCount() === 1)) { throw new RuntimeException('Expected exactly one result'); }
+      return (intval(idx($result->fetch(), 'COUNT(*)')) > 0);
     } else {
       return false;
     }
   }
 
-  public static async function genLevelIdUnknownCountry(
+  public static function levelIdUnknownCountry(
     string $type,
     string $title,
     string $description,
     int $points,
-  ): Awaitable<int> {
-    $db = await self::genDb();
+  ): int {
+    $db = Db::getInstance();
 
-    $result =
-      await $db->queryf(
-        'SELECT id FROM levels WHERE type = %s AND title = %s AND description = %s AND points = %d',
-        $type,
-        $title,
-        $description,
-        $points,
-      );
+    $result = $db->query(
+      'SELECT id FROM levels WHERE type = ? AND title = ? AND description = ? AND points = ?',
+      [$type, $title, $description, $points],
+    );
 
-    invariant($result->numRows() === 1, 'Expected exactly one result');
-    return intval(must_have_idx($result->mapRows()[0], 'id'));
+    if (!($result->rowCount() === 1)) { throw new RuntimeException('Expected exactly one result'); }
+    return intval(must_have_idx($result->fetch(), 'id'));
   }
 
-  public static async function genLevelUnknownCountry(
+  public static function levelUnknownCountry(
     string $type,
     string $title,
     string $description,
     int $points,
-  ): Awaitable<Level> {
+  ): Level {
 
-    $level_id = await self::genLevelIdUnknownCountry(
+    $level_id = self::levelIdUnknownCountry(
       $type,
       $title,
       $description,
       $points,
     );
 
-    $level = await self::gen($level_id);
+    $level = self::get($level_id);
     return $level;
   }
 }

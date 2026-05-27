@@ -1,4 +1,4 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class Token extends Model {
   private function __construct(
@@ -30,7 +30,7 @@ class Token extends Model {
     return $this->created_ts;
   }
 
-  private static function tokenFromRow(Map<string, string> $row): Token {
+  private static function tokenFromRow(array $row): Token {
     return new Token(
       intval(must_have_idx($row, 'id')),
       intval(must_have_idx($row, 'used')),
@@ -47,27 +47,28 @@ class Token extends Model {
   }
 
   // Create token.
-  public static async function genCreate(): Awaitable<void> {
-    $db = await self::genDb();
-    $tokens = array();
-    $query = array();
+  public static function create(): void {
+    $db = Db::getInstance();
+    $tokens = [];
+    $query = [];
     $token_number = 50;
     for ($i = 0; $i < $token_number; $i++) {
       $token = self::generate();
-      await $db->queryf(
-        'INSERT INTO registration_tokens (token, created_ts, used, team_id) VALUES (%s, NOW(), 0, 0)',
-        $token,
+      $db->query(
+        'INSERT INTO registration_tokens (token, created_ts, used, team_id) VALUES (?, NOW(), 0, 0)',
+        [$token],
       );
     }
   }
 
-  public static async function genExport(): Awaitable<void> {
-    $db = await self::genDb();
-    $result = await $db->queryf(
+  public static function export(): void {
+    $db = Db::getInstance();
+    $result = $db->query(
       'SELECT token FROM registration_tokens WHERE used = 0',
+      [],
     );
 
-    $tokens = array_map($m ==> $m['token'], $result->mapRows());
+    $tokens = array_map(fn($m) => $m['token'], $result->fetchAll());
 
     header('Content-Type: application/json;charset=utf-8');
     header('Content-Disposition: attachment; filename=tokens.json');
@@ -75,21 +76,21 @@ class Token extends Model {
     exit();
   }
 
-  public static async function genDelete(string $token): Awaitable<void> {
-    $db = await self::genDb();
-    $result = await $db->queryf(
-      'DELETE from registration_tokens WHERE token = %s LIMIT 1',
-      $token,
+  public static function delete(string $token): void {
+    $db = Db::getInstance();
+    $result = $db->query(
+      'DELETE from registration_tokens WHERE token = ? LIMIT 1',
+      [$token],
     );
   }
 
   // Get all tokens.
-  public static async function genAllTokens(): Awaitable<array<Token>> {
-    $db = await self::genDb();
-    $result = await $db->queryf('SELECT * FROM registration_tokens');
+  public static function allTokens(): array {
+    $db = Db::getInstance();
+    $result = $db->query('SELECT * FROM registration_tokens', []);
 
-    $tokens = array();
-    foreach ($result->mapRows() as $row) {
+    $tokens = [];
+    foreach ($result->fetchAll() as $row) {
       $tokens[] = self::tokenFromRow($row);
     }
 
@@ -97,47 +98,43 @@ class Token extends Model {
   }
 
   // Get all available tokens.
-  public static async function genAllAvailableTokens(
-  ): Awaitable<array<Token>> {
-    $db = await self::genDb();
-    $result =
-      await $db->queryf('SELECT * FROM registration_tokens WHERE used = 0');
+  public static function allAvailableTokens(): array {
+    $db = Db::getInstance();
+    $result = $db->query(
+      'SELECT * FROM registration_tokens WHERE used = 0',
+      [],
+    );
 
-    $tokens = array();
-    foreach ($result->mapRows() as $row) {
+    $tokens = [];
+    foreach ($result->fetchAll() as $row) {
       $tokens[] = self::tokenFromRow($row);
     }
 
     return $tokens;
   }
 
-  public static async function genCheck(string $token): Awaitable<bool> {
-    $db = await self::genDb();
+  public static function check(string $token): bool {
+    $db = Db::getInstance();
 
-    $result =
-      await $db->queryf(
-        'SELECT COUNT(*) FROM registration_tokens WHERE used = 0 AND token = %s',
-        $token,
-      );
+    $result = $db->query(
+      'SELECT COUNT(*) FROM registration_tokens WHERE used = 0 AND token = ?',
+      [$token],
+    );
 
-    if ($result->numRows() > 0) {
-      invariant($result->numRows() === 1, 'Expected exactly one result');
-      return (intval($result->mapRows()[0]['COUNT(*)']) > 0);
+    if ($result->rowCount() > 0) {
+      if (!($result->rowCount() === 1)) { throw new RuntimeException('Expected exactly one result'); }
+      return (intval($result->fetch()['COUNT(*)']) > 0);
     } else {
       return false;
     }
   }
 
   // Use a token for a team registration.
-  public static async function genUse(
-    string $token,
-    int $team_id,
-  ): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf(
-      'UPDATE registration_tokens SET used = 1, team_id = %d, use_ts = NOW() WHERE token = %s LIMIT 1',
-      $team_id,
-      $token,
+  public static function useToken(string $token, int $team_id): void {
+    $db = Db::getInstance();
+    $db->query(
+      'UPDATE registration_tokens SET used = 1, team_id = ?, use_ts = NOW() WHERE token = ? LIMIT 1',
+      [$team_id, $token],
     );
   }
 }

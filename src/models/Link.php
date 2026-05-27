@@ -1,16 +1,15 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class Link extends Model {
 
   protected static string $MC_KEY = 'links:';
 
-  protected static Map<string, string>
-    $MC_KEYS = Map {
-      'LEVELS_COUNT' => 'link_levels_count',
-      'LEVEL_LINKS' => 'link_levels',
-      'LINKS' => 'link_by_id',
-      'LEVEL_LINKS_VALUES' => 'link_level_values',
-    };
+  protected static array $MC_KEYS = [
+    'LEVELS_COUNT' => 'link_levels_count',
+    'LEVEL_LINKS' => 'link_levels',
+    'LINKS' => 'link_by_id',
+    'LEVEL_LINKS_VALUES' => 'link_level_values',
+  ];
 
   private function __construct(
     private int $id,
@@ -31,210 +30,183 @@ class Link extends Model {
   }
 
   // Create link for a given level.
-  public static async function genCreate(
+  public static function create(
     string $link,
     int $level_id,
-  ): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf(
-      'INSERT INTO links (link, level_id, created_ts) VALUES (%s, %d, NOW())',
-      $link,
-      $level_id,
+  ): void {
+    $db = Db::getInstance();
+    $db->query(
+      'INSERT INTO links (link, level_id, created_ts) VALUES (?, ?, NOW())',
+      [$link, $level_id],
     );
     self::invalidateMCRecords(); // Invalidate Memcached Links data.
   }
 
   // Modify existing link.
-  public static async function genUpdate(
+  public static function update(
     string $link,
     int $level_id,
     int $link_id,
-  ): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf(
-      'UPDATE links SET link = %s, level_id = %d WHERE id = %d LIMIT 1',
-      $link,
-      $level_id,
-      $link_id,
+  ): void {
+    $db = Db::getInstance();
+    $db->query(
+      'UPDATE links SET link = ?, level_id = ? WHERE id = ? LIMIT 1',
+      [$link, $level_id, $link_id],
     );
     self::invalidateMCRecords(); // Invalidate Memcached Links data.
   }
 
   // Delete existing link.
-  public static async function genDelete(int $link_id): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf('DELETE FROM links WHERE id = %d LIMIT 1', $link_id);
+  public static function delete(int $link_id): void {
+    $db = Db::getInstance();
+    $db->query('DELETE FROM links WHERE id = ? LIMIT 1', [$link_id]);
     self::invalidateMCRecords(); // Invalidate Memcached Links data.
   }
 
   // Get all links for a given level.
-  public static async function genAllLinks(
+  public static function allLinks(
     int $level_id,
     bool $refresh = false,
-  ): Awaitable<array<Link>> {
+  ): array {
     $mc_result = self::getMCRecords('LEVEL_LINKS');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $links = array();
-      $result = await $db->queryf('SELECT * FROM links');
-      foreach ($result->mapRows() as $row) {
-        $links[$row->get('level_id')][] = self::linkFromRow($row);
+      $db = Db::getInstance();
+      $links = [];
+      $result = $db->query('SELECT * FROM links', []);
+      foreach ($result->fetchAll() as $row) {
+        $links[$row['level_id']][] = self::linkFromRow($row);
       }
-      self::setMCRecords('LEVEL_LINKS', new Map($links));
-      $links = new Map($links);
-      if ($links->contains($level_id)) {
-        $link_array = $links->get($level_id);
-        invariant(
-          is_array($link_array),
-          '$link_array should be an array of Link',
-        );
+      self::setMCRecords('LEVEL_LINKS', $links);
+      if (array_key_exists($level_id, $links)) {
+        $link_array = $links[$level_id];
+        if (!is_array($link_array)) { throw new RuntimeException('$link_array should be an array of Link'); }
         return $link_array;
       } else {
-        return array();
+        return [];
       }
     } else {
-      invariant($mc_result instanceof Map, 'links should be of type Map');
-      if ($mc_result->contains($level_id)) {
-        $link_array = $mc_result->get($level_id);
-        invariant(
-          is_array($link_array),
-          '$link_array should be an array of Link',
-        );
+      if (!is_array($mc_result)) { throw new RuntimeException('links should be of type array'); }
+      if (array_key_exists($level_id, $mc_result)) {
+        $link_array = $mc_result[$level_id];
+        if (!is_array($link_array)) { throw new RuntimeException('$link_array should be an array of Link'); }
         return $link_array;
       } else {
-        return array();
+        return [];
       }
     }
   }
 
-  public static async function genAllLinksForGame(
+  public static function allLinksForGame(
     bool $refresh = false,
-  ): Awaitable<Map<?int, ?Link>> {
+  ): array {
     $mc_result = self::getMCRecords('LEVEL_LINKS');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $links = array();
-      $result = await $db->queryf('SELECT * FROM links');
-      foreach ($result->mapRows() as $row) {
-        $links[intval($row->get('level_id'))][] = self::linkFromRow($row);
+      $db = Db::getInstance();
+      $links = [];
+      $result = $db->query('SELECT * FROM links', []);
+      foreach ($result->fetchAll() as $row) {
+        $links[intval($row['level_id'])][] = self::linkFromRow($row);
       }
-      self::setMCRecords('LEVEL_LINKS', new Map($links));
-      $links = new Map($links);
-      invariant($links instanceof Map, 'links should be a Map of Link');
+      self::setMCRecords('LEVEL_LINKS', $links);
+      if (!is_array($links)) { throw new RuntimeException('links should be an array of Link'); }
       return $links;
     } else {
-      invariant($mc_result instanceof Map, 'links should be of type Map');
-      invariant($mc_result instanceof Map, 'cache should be a Map of Link');
+      if (!is_array($mc_result)) { throw new RuntimeException('links should be of type array'); }
       return $mc_result;
     }
   }
 
-  public static async function genAllLinksValues(
+  public static function allLinksValues(
     int $level_id,
     bool $refresh = false,
-  ): Awaitable<array<string>> {
+  ): array {
     $mc_result = self::getMCRecords('LEVEL_LINKS_VALUES');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $link_values = array();
-      $links = await self::genAllLinksForGame();
-      invariant($links instanceof Map, 'link should be a Map of Link');
+      $db = Db::getInstance();
+      $link_values = [];
+      $links = self::allLinksForGame();
+      if (!is_array($links)) { throw new RuntimeException('link should be an array of Link'); }
       foreach ($links as $level => $link_arr) {
-        invariant(is_array($link_arr), 'link_arr should be an array of Link');
+        if (!is_array($link_arr)) { throw new RuntimeException('link_arr should be an array of Link'); }
         foreach ($link_arr as $link_obj) {
-          invariant(
-            $link_obj instanceof Link,
-            'link_obj should be of type Link',
-          );
+          if (!($link_obj instanceof Link)) { throw new RuntimeException('link_obj should be of type Link'); }
           $link_values[$level][] = $link_obj->getLink();
         }
       }
-      self::setMCRecords('LEVEL_LINKS_VALUES', new Map($link_values));
-      $link_values = new Map($link_values);
-      if ($link_values->contains($level_id)) {
-        $link_array = $link_values->get($level_id);
-        invariant(
-          is_array($link_array),
-          'link_array should be an array of string',
-        );
+      self::setMCRecords('LEVEL_LINKS_VALUES', $link_values);
+      if (array_key_exists($level_id, $link_values)) {
+        $link_array = $link_values[$level_id];
+        if (!is_array($link_array)) { throw new RuntimeException('link_array should be an array of string'); }
         return $link_array;
       } else {
-        return array();
+        return [];
       }
     } else {
-      invariant($mc_result instanceof Map, 'links should be of type Map');
-      if ($mc_result->contains($level_id)) {
-        $link_array = $mc_result->get($level_id);
-        invariant(
-          is_array($link_array),
-          'link_array should be an array of string',
-        );
+      if (!is_array($mc_result)) { throw new RuntimeException('links should be of type array'); }
+      if (array_key_exists($level_id, $mc_result)) {
+        $link_array = $mc_result[$level_id];
+        if (!is_array($link_array)) { throw new RuntimeException('link_array should be an array of string'); }
         return $link_array;
       } else {
-        return array();
+        return [];
       }
     }
   }
 
   // Get a single link.
-  public static async function gen(
+  public static function get(
     int $link_id,
     bool $refresh = false,
-  ): Awaitable<Link> {
+  ): Link {
     $mc_result = self::getMCRecords('LINKS');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $links = Map {};
-      $result = await $db->queryf('SELECT * FROM links');
-      foreach ($result->mapRows() as $row) {
-        $links->add(Pair {intval($row->get('id')), self::linkFromRow($row)});
+      $db = Db::getInstance();
+      $links = [];
+      $result = $db->query('SELECT * FROM links', []);
+      foreach ($result->fetchAll() as $row) {
+        $links[intval($row['id'])] = self::linkFromRow($row);
       }
       self::setMCRecords('LINKS', $links);
-      invariant($links->contains($link_id) !== false, 'link not found');
-      $link = $links->get($link_id);
-      invariant($link instanceof Link, 'link should be of type Link');
+      if (!array_key_exists($link_id, $links)) { throw new RuntimeException('link not found'); }
+      $link = $links[$link_id];
+      if (!($link instanceof Link)) { throw new RuntimeException('link should be of type Link'); }
       return $link;
     } else {
-      invariant($mc_result instanceof Map, 'links should be of type Map');
-      invariant($mc_result->contains($link_id) !== false, 'link not found');
-      $link = $mc_result->get($link_id);
-      invariant($link instanceof Link, 'link should be of type Link');
+      if (!is_array($mc_result)) { throw new RuntimeException('links should be of type array'); }
+      if (!array_key_exists($link_id, $mc_result)) { throw new RuntimeException('link not found'); }
+      $link = $mc_result[$link_id];
+      if (!($link instanceof Link)) { throw new RuntimeException('link should be of type Link'); }
       return $link;
     }
   }
 
   // Check if a level has links.
-  public static async function genHasLinks(
+  public static function hasLinks(
     int $level_id,
     bool $refresh = false,
-  ): Awaitable<bool> {
+  ): bool {
     $mc_result = self::getMCRecords('LEVELS_COUNT');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $link_count = Map {};
-      $result =
-        await $db->queryf(
-          'SELECT levels.id as level_id, COUNT(links.id) as count FROM levels LEFT JOIN links ON levels.id = links.level_id GROUP BY levels.id',
-        );
-      foreach ($result->mapRows() as $row) {
-        $link_count->add(
-          Pair {intval($row->get('level_id')), intval($row->get('count'))},
-        );
+      $db = Db::getInstance();
+      $link_count = [];
+      $result = $db->query(
+        'SELECT levels.id as level_id, COUNT(links.id) as count FROM levels LEFT JOIN links ON levels.id = links.level_id GROUP BY levels.id',
+        [],
+      );
+      foreach ($result->fetchAll() as $row) {
+        $link_count[intval($row['level_id'])] = intval($row['count']);
       }
       self::setMCRecords('LEVELS_COUNT', $link_count);
-      if ($link_count->contains($level_id)) {
-        $level_link_count = $link_count->get($level_id);
+      if (array_key_exists($level_id, $link_count)) {
+        $level_link_count = $link_count[$level_id];
         return intval($level_link_count) > 0;
       } else {
         return false;
       }
     } else {
-      invariant(
-        $mc_result instanceof Map,
-        'link_count should be of type Map',
-      );
-      if ($mc_result->contains($level_id)) {
-        $level_link_count = $mc_result->get($level_id);
+      if (!is_array($mc_result)) { throw new RuntimeException('link_count should be of type array'); }
+      if (array_key_exists($level_id, $mc_result)) {
+        $level_link_count = $mc_result[$level_id];
         return intval($level_link_count) > 0;
       } else {
         return false;
@@ -242,7 +214,7 @@ class Link extends Model {
     }
   }
 
-  private static function linkFromRow(Map<string, string> $row): Link {
+  private static function linkFromRow(array $row): Link {
     return new Link(
       intval(must_have_idx($row, 'id')),
       intval(must_have_idx($row, 'level_id')),

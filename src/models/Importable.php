@@ -1,7 +1,5 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 interface Importable {
-  public static function importAll(
-    array<string, array<string, mixed>> $elements,
-  ): Awaitable<bool>;
+  public static function importAll(array $elements): bool;
 }
