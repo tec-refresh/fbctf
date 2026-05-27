@@ -37,7 +37,7 @@ class StatsController extends DataController {
     // Number of hints
     $stats['captures'] = count($capture_stats);
 
-    // AsyncMysqlConnectionPool Stats
+    // Database Stats
     $stats['database'] = Db::getDatabaseStats();
 
     // Memcached Stats
