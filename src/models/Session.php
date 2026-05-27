@@ -130,7 +130,7 @@ class Session extends Model {
     bool $refresh = false,
   ): Session {
     $mc_result = self::getMCSession($cookie);
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || $refresh) {
       $db = Db::getInstance();
       $result = $db->query(
         'SELECT * FROM sessions WHERE cookie = ? LIMIT 1',
@@ -157,7 +157,7 @@ class Session extends Model {
     bool $refresh = false,
   ): bool {
     $mc_result = self::getMCSession($cookie);
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || $refresh) {
       $db = Db::getInstance();
       $result = $db->query(
         'SELECT COUNT(*) FROM sessions WHERE cookie = ?',
@@ -179,7 +179,7 @@ class Session extends Model {
     bool $refresh = false,
   ): string {
     $mc_result = self::getMCSession($cookie);
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || $refresh) {
       $db = Db::getInstance();
       $result = $db->query(
         'SELECT * FROM sessions WHERE cookie = ? LIMIT 1',
