@@ -51,13 +51,6 @@ function package() {
   fi
 }
 
-function install_unison() {
-  #Arch moved to zstd, installing zstd
-  package zstd
-  cd /
-  #dl_pipe "https://www.archlinux.org/packages/extra/x86_64/unison/download/" | sudo tar Jx
-  dl_pipe "https://www.archlinux.org/packages/extra/x86_64/unison/download/" | zstd -d | sudo tar x
-}
 
 function repo_osquery() {
   log "Adding osquery repository keys"
@@ -67,12 +60,8 @@ function repo_osquery() {
 
 function install_mysql() {
   local __pwd=$1
-
-  echo "mysql-server-5.5 mysql-server/root_password password $__pwd" | sudo debconf-set-selections
-  echo "mysql-server-5.5 mysql-server/root_password_again password $__pwd" | sudo debconf-set-selections
-  package mysql-server
-
-  # It should be started automatically, but just in case
+  log "Installing MySQL 8.0"
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server
   sudo service mysql restart
 }
 
@@ -208,7 +197,7 @@ function install_nginx() {
   sudo openssl dhparam -out "$__dhparam" 2048
 
   if [[ "$__multiservers" == true ]]; then
-      cat "$__path/extra/nginx/nginx.conf" | sed "s|CTFPATH|$__path/src|g" | sed "s|CER_FILE|$__cert|g" | sed "s|KEY_FILE|$__key|g" | sed "s|DHPARAM_FILE|$__dhparam|g" | sed "s|HHVMSERVER|$__hhvmserver|g" | sudo tee /etc/nginx/sites-available/fbctf.conf
+      cat "$__path/extra/nginx/nginx.conf" | sed "s|CTFPATH|$__path/src|g" | sed "s|CER_FILE|$__cert|g" | sed "s|KEY_FILE|$__key|g" | sed "s|DHPARAM_FILE|$__dhparam|g" | sed "s|PHPFPMSERVER|$__hhvmserver|g" | sudo tee /etc/nginx/sites-available/fbctf.conf
   else
       cat "$__path/extra/nginx.conf" | sed "s|CTFPATH|$__path/src|g" | sed "s|CER_FILE|$__cert|g" | sed "s|KEY_FILE|$__key|g" | sed "s|DHPARAM_FILE|$__dhparam|g" | sudo tee /etc/nginx/sites-available/fbctf.conf
   fi
@@ -223,59 +212,33 @@ function install_nginx() {
   fi
 }
 
-# TODO: We should split this function into one where the repo is added, and a
-# second where the repo is installed
-function install_hhvm() {
+function install_php() {
   local __path=$1
-  local __config=$2
-  local __multiservers=$3
 
   package software-properties-common
 
-  log "Adding HHVM keys"
-  sudo DEBIAN_FRONTEND=noninteractive apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0x5a16e7281be7a449
-  sudo DEBIAN_FRONTEND=noninteractive apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xB4112585D386EB94
-
-  log "Adding HHVM repo"
-  sudo DEBIAN_FRONTEND=noninteractive add-apt-repository "deb http://dl.hhvm.com/ubuntu xenial-lts-3.21 main"
-
+  log "Adding PHP repository"
+  sudo DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:ondrej/php
   package_repo_update
-  package hhvm
 
-  log "Enabling HHVM to start by default"
-  sudo update-rc.d hhvm defaults
+  log "Installing PHP 8.3 and extensions"
+  package php8.3-fpm
+  package php8.3-mysql
+  package php8.3-memcached
+  package php8.3-ldap
+  package php8.3-xml
+  package php8.3-mbstring
+  package php8.3-curl
+  package php8.3-zip
 
-  log "Copying HHVM configuration"
-  if [[ "$__multiservers" == true ]]; then
-    cat "$__path/extra/hhvm.conf" | sed "s|CTFPATH|$__path/|g" | sed "s|hhvm.server.ip|;hhvm.server.ip|g" | sed "s|hhvm.server.file_socket|;hhvm.server.file_socket|g" | sudo tee "$__config"
-  else
-    cat "$__path/extra/hhvm.conf" | sed "s|CTFPATH|$__path/|g" | sed "s|hhvm.server.port|;hhvm.server.port|g" | sudo tee "$__config"
-  fi
+  log "PHP as system default"
+  sudo update-alternatives --set php /usr/bin/php8.3
 
-  log "HHVM as PHP systemwide"
-  sudo /usr/bin/update-alternatives --install /usr/bin/php php /usr/bin/hhvm 60
+  log "Restarting PHP-FPM"
+  sudo service php8.3-fpm restart
 
-  log "PHP Alternaives:"
-  sudo /usr/bin/update-alternatives --display php
-
-  log "Restarting HHVM"
-  sudo service hhvm restart
-
-  log "PHP/HHVM Version:"
+  log "PHP Version:"
   php -v
-  hhvm --version
-}
-
-function hhvm_performance() {
-  local __path=$1
-  local __config=$2
-  local __oldrepo="/var/run/hhvm/hhvm.hhbc"
-  local __repofile="/var/cache/hhvm/hhvm.hhbc"
-
-  cat "$__config" | sed "s|$__oldrepo|$__repofile|g" | sudo tee "$__config"
-  sudo hhvm-repo-mode enable "$__path"
-  sudo chown www-data:www-data "$__repofile"
-  sudo service hhvm restart
 }
 
 function install_composer() {
@@ -283,14 +246,14 @@ function install_composer() {
 
   cd $__path
   dl_pipe "https://getcomposer.org/installer" | php
-  hhvm composer.phar install
+  php composer.phar install
   sudo mv composer.phar /usr/bin
   sudo chmod +x /usr/bin/composer.phar
 }
 
 function install_nodejs() {
-  log "Downloading and setting node.js version 10.x repo information"
-  dl_pipe "https://deb.nodesource.com/setup_10.x" | sudo -E bash -
+  log "Downloading and setting node.js version 20.x repo information"
+  dl_pipe "https://deb.nodesource.com/setup_20.x" | sudo -E bash -
 
   log "Installing node.js"
   package nodejs
@@ -358,7 +321,7 @@ function set_password() {
   if [[ "$__multiservers" == true ]]; then
       HASH=$(php "$__path/extra/hash.php" "$__admin_pwd")
   else
-      HASH=$(hhvm -f "$__path/extra/hash.php" "$__admin_pwd")
+      HASH=$(php "$__path/extra/hash.php" "$__admin_pwd")
   fi
 
   # First try to delete the existing admin user
@@ -426,8 +389,6 @@ function quick_setup() {
     sudo docker run --name fbctf -p 80:80 -p 443:443 fbctf-image
   elif [[ "$__type" = "start_docker_multi" ]]; then
     package_repo_update
-    package python-pip
-    sudo pip install docker-compose
     if [[ "$__mode" = "prod" ]]; then
       sed -i -e 's|      #  MODE: prod|        MODE: prod|g' ./docker-compose.yml
       sed -i -e 's|      #args|      args|g' ./docker-compose.yml
@@ -435,7 +396,7 @@ function quick_setup() {
       sed -i -e 's|        MODE: prod|      #  MODE: prod|g' ./docker-compose.yml
       sed -i -e 's|      args|      #args|g' ./docker-compose.yml
     fi
-    sudo docker-compose up
+    sudo docker compose up
   elif [[ "$__type" = "start_vagrant" ]]; then
     cp Vagrantfile-single Vagrantfile
     export FBCTF_PROVISION_ARGS="-m $__mode"

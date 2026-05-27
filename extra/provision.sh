@@ -60,11 +60,10 @@ DOMAIN="none"
 EMAIL="none"
 CODE_PATH="/vagrant"
 CTF_PATH="/var/www/fbctf"
-HHVM_CONFIG_PATH="/etc/hhvm/server.ini"
 DOCKER=false
 MULTIPLE_SERVERS=false
 SERVER_TYPE="none"
-HHVM_SERVER="hhvm"
+PHPFPM_SERVER="php-fpm"
 MYSQL_SERVER="mysql"
 CACHE_SERVER="cache"
 
@@ -185,7 +184,7 @@ while true; do
       shift 2
       ;;
     --hhvm-server)
-      HHVM_SERVER=$2
+      PHPFPM_SERVER=$2
       shift 2
       ;;
     --mysql-server)
@@ -261,22 +260,13 @@ fi
 
     # If multiple servers are being utilized, ensure provision was called from the "hhvm" server
     if [[ "$MULTIPLE_SERVERS" == false || "$SERVER_TYPE" = "hhvm" ]]; then
-        log "Installing HHVM"
-        install_hhvm "$CTF_PATH" "$HHVM_CONFIG_PATH" "$MULTIPLE_SERVERS"
+        log "Installing PHP 8.3"
+        install_php "$CTF_PATH"
 
         log "Installing Composer"
         install_composer "$CTF_PATH"
         log "Installing Composer in /usr/bin"
-        hhvm /usr/bin/composer.phar install
-
-        # In production, enable HHVM Repo Authoritative mode by default.
-        # More info here: https://docs.hhvm.com/hhvm/advanced-usage/repo-authoritative
-        if [[ "$MODE" == "prod" ]] && [[ "$NOREPOMODE" == false ]]; then
-            log "Enabling HHVM Repo Authoritative Mode"
-            hhvm_performance "$CTF_PATH" "$HHVM_CONFIG_PATH"
-        else
-            log "HHVM Repo Authoritative mode NOT enabled"
-        fi
+        php /usr/bin/composer.phar install
 
         log "Creating DB Connection file"
         if [[ $MULTIPLE_SERVERS == true ]]; then
@@ -292,14 +282,6 @@ fi
         if [[ "$MODE" == "dev" ]] || [[ "$MODE" == "prod" ]]; then
             package build-essential
             package libssl-dev
-            package python-all-dev
-            package python-setuptools
-            package python-pip
-            log "Upgrading pip"
-            #sudo -H pip install --upgrade pip
-	    wget -O - https://bootstrap.pypa.io/pip/2.7/get-pip.py | sudo python2
-            log "Installing pip - mycli"
-            sudo -H pip install mycli
             package emacs
             package htop
         fi
@@ -317,11 +299,8 @@ fi
         run_grunt "$CTF_PATH" "$MODE"
 
         log "Installing nginx and certificates"
-        install_nginx "$CTF_PATH" "$MODE" "$TYPE" "$EMAIL" "$DOMAIN" "$DOCKER" "$MULTIPLE_SERVERS" "$HHVM_SERVER"
+        install_nginx "$CTF_PATH" "$MODE" "$TYPE" "$EMAIL" "$DOMAIN" "$DOCKER" "$MULTIPLE_SERVERS" "$PHPFPM_SERVER"
 
-        log "Installing unison 2.48.3. Remember to install the same version on your host machine"
-        package xz-utils
-        install_unison
     fi
 
     log "Creating attachments folder, and setting ownership to www-data"
@@ -358,7 +337,7 @@ if [[ "$MULTIPLE_SERVERS" == false || "$SERVER_TYPE" = "mysql" ]]; then
     # Configuration for MySQL
     if [[ "$MULTIPLE_SERVERS" == true ]] && [[ "$SERVER_TYPE" = "mysql" ]]; then
         # This is required in order to generate password hash (since HHVM is not being installed)
-        package php7.0-cli
+        package php8.3-cli
 
         sudo sed -e '/^bind-address/ s/^#*/#/' -i /etc/mysql/mysql.conf.d/mysqld.cnf
         sudo sed -e '/^skip-external-locking/ s/^#*/#/' -i /etc/mysql/mysql.conf.d/mysqld.cnf
@@ -375,7 +354,7 @@ if [[ "$MULTIPLE_SERVERS" == true ]]; then
         :
     else
         if [[ "$SERVER_TYPE" = "hhvm" ]]; then
-            sudo service hhvm restart
+            sudo service php8.3-fpm restart
         elif [[ "$SERVER_TYPE" = "nginx" ]]; then
             sudo service nginx restart
             if [[ -d "/vagrant" ]]; then
