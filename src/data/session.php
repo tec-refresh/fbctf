@@ -1,19 +1,17 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 require_once ($_SERVER['DOCUMENT_ROOT'].'/../vendor/autoload.php');
 
 class SessionController extends DataController {
-  public async function genGenerateData(): Awaitable<void> {
+  public function generateData(): void {
 
-    /* HH_IGNORE_ERROR[1002] */
     SessionUtils::sessionStart();
     SessionUtils::enforceLogin();
 
-    $data = array('true');
+    $data = ['true'];
     $this->jsonSend($data);
   }
 }
 
-/* HH_IGNORE_ERROR[1002] */
 $sessionControler = new SessionController();
 $sessionControler->sendData();

@@ -1,19 +1,18 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 require_once ($_SERVER['DOCUMENT_ROOT'].'/../vendor/autoload.php');
 
 class CapturesController extends DataController {
-  public async function genGenerateData(): Awaitable<void> {
+  public function generateData(): void {
 
-    /* HH_IGNORE_ERROR[1002] */
     SessionUtils::sessionStart();
     SessionUtils::enforceLogin();
 
-    $data = array();
+    $data = [];
 
     $my_team_id = SessionUtils::sessionTeam();
 
-    $captures = await ScoreLog::genAllScoresByTeam($my_team_id);
+    $captures = ScoreLog::allScoresByTeam($my_team_id);
 
     foreach ($captures as $capture) {
       $data[] = $capture->getLevelId();
@@ -23,6 +22,5 @@ class CapturesController extends DataController {
   }
 }
 
-/* HH_IGNORE_ERROR[1002] */
 $capturesData = new CapturesController();
 $capturesData->sendData();

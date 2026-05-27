@@ -1,22 +1,19 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 require_once ($_SERVER['DOCUMENT_ROOT'].'/../vendor/autoload.php');
 
 class TeamDataController extends DataController {
-  public async function genGenerateData(): Awaitable<void> {
+  public function generateData(): void {
 
-    /* HH_IGNORE_ERROR[1002] */
     SessionUtils::sessionStart();
     SessionUtils::enforceLogin();
 
     $rank = 1;
-    list($leaderboard, $gameboard, $leaderboard_limit) = await \HH\Asio\va(
-      MultiTeam::genLeaderboard(),
-      Configuration::gen('gameboard'),
-      Configuration::gen('leaderboard_limit'),
-    );
+    $leaderboard = MultiTeam::leaderboard();
+    $gameboard = Configuration::get('gameboard');
+    $leaderboard_limit = Configuration::get('leaderboard_limit');
 
-    $teams_data = (object) array();
+    $teams_data = (object) [];
 
     // If refresing is disabled, exit
     if ($gameboard->getValue() === '0') {
@@ -34,32 +31,28 @@ class TeamDataController extends DataController {
     }
     for ($i = 0; $i < $leaderboard_count; $i++) {
       $team = $leaderboard[$i];
-      list($base, $quiz, $flag) = await \HH\Asio\va(
-        MultiTeam::genPointsByType($team->getId(), 'base'),
-        MultiTeam::genPointsByType($team->getId(), 'quiz'),
-        MultiTeam::genPointsByType($team->getId(), 'flag'),
-      );
+      $base = MultiTeam::pointsByType($team->getId(), 'base');
+      $quiz = MultiTeam::pointsByType($team->getId(), 'quiz');
+      $flag = MultiTeam::pointsByType($team->getId(), 'flag');
 
-      $logo_model = await $team->getLogoModel(); // TODO: Combine Awaits
+      $logo_model = $team->getLogoModel();
 
-      $team_data = (object) array(
-        'logo' => array(
+      $team_data = (object) [
+        'logo' => [
           'path' => $logo_model->getLogo(),
           'name' => $logo_model->getName(),
           'custom' => $logo_model->getCustom(),
-        ),
-        'team_members' => array(),
+        ],
+        'team_members' => [],
         'rank' => $rank,
-        'points' => array(
+        'points' => [
           'base' => $base,
           'quiz' => $quiz,
           'flag' => $flag,
           'total' => $team->getPoints(),
-        ),
-      );
+        ],
+      ];
       if ($team->getName()) {
-        /* HH_FIXME[1002] */
-        /* HH_FIXME[2011] */
         $teams_data->{$team->getName()} = $team_data;
       }
       $rank++;

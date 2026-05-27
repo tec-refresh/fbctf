@@ -1,17 +1,15 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 require_once ($_SERVER['DOCUMENT_ROOT'].'/../vendor/autoload.php');
 
 class LiveSyncDataController extends DataController {
 
-  public async function genGenerateData(): Awaitable<void> {
-    $data = array();
-    await tr_start();
+  public function generateData(): void {
+    $data = [];
+    tr_start();
     $input_auth_key = idx(Utils::getGET(), 'auth', '');
-    list($livesync_enabled, $livesync_auth_key) = await \HH\Asio\va(
-      Configuration::gen('livesync'),
-      Configuration::gen('livesync_auth_key'),
-    );
+    $livesync_enabled = Configuration::get('livesync');
+    $livesync_auth_key = Configuration::get('livesync_auth_key');
 
     if ($livesync_enabled->getValue() === '1' &&
         hash_equals(
@@ -19,89 +17,56 @@ class LiveSyncDataController extends DataController {
           strval($input_auth_key),
         )) {
 
-      $livesync_enabled_awaits = Map {
-        'all_teams' => Team::genAllTeams(),
-        'all_scores' => ScoreLog::genAllScores(),
-        'all_hints' => HintLog::genAllHints(),
-        'all_levels' => Level::genAllLevels(),
-      };
-      $livesync_enabled_awaits_results =
-        await \HH\Asio\m($livesync_enabled_awaits);
-      $all_teams = $livesync_enabled_awaits_results['all_teams'];
-      invariant(
-        is_array($all_teams),
-        'all_teams should be an array and not null',
-      );
+      $all_teams = Team::getAllTeams();
+      $all_scores = ScoreLog::allScores();
+      $all_hints = HintLog::allHints();
+      $all_levels = Level::allLevels();
 
-      $all_scores = $livesync_enabled_awaits_results['all_scores'];
-      invariant(
-        is_array($all_scores),
-        'all_scores should be an array and not null',
-      );
+      if (!is_array($all_teams)) {
+        throw new RuntimeException('all_teams should be an array and not null');
+      }
 
-      $all_hints = $livesync_enabled_awaits_results['all_hints'];
-      invariant(
-        is_array($all_hints),
-        'all_hints should be an array and not null',
-      );
+      if (!is_array($all_scores)) {
+        throw new RuntimeException('all_scores should be an array and not null');
+      }
 
-      $all_levels = $livesync_enabled_awaits_results['all_levels'];
-      invariant(
-        is_array($all_levels),
-        'all_levels should be an array and not null',
-      );
+      if (!is_array($all_hints)) {
+        throw new RuntimeException('all_hints should be an array and not null');
+      }
 
-      $data = array();
-      $teams_array = array();
-      $team_livesync_exists = Map {};
-      $team_livesync_key = Map {};
+      if (!is_array($all_levels)) {
+        throw new RuntimeException('all_levels should be an array and not null');
+      }
+
+      $data = [];
+      $teams_array = [];
+      $team_livesync_exists = [];
+      $team_livesync_key = [];
       foreach ($all_teams as $team) {
-        $team_livesync_types = Map {};
+        $team_livesync_types = [];
         $team_id = $team->getId();
 
-        $team_livesync_types->add(
-          Pair {'fbctf', Team::genLiveSyncExists($team_id, 'fbctf')},
-        );
-        $team_livesync_types->add(
-          Pair {
-            'facebook_oauth',
-            Team::genLiveSyncExists($team_id, 'facebook_oauth'),
-          },
-        );
-        $team_livesync_types->add(
-          Pair {
-            'google_oauth',
-            Team::genLiveSyncExists($team_id, 'google_oauth'),
-          },
-        );
+        $team_livesync_types['fbctf'] = Team::liveSyncExists($team_id, 'fbctf');
+        $team_livesync_types['facebook_oauth'] = Team::liveSyncExists($team_id, 'facebook_oauth');
+        $team_livesync_types['google_oauth'] = Team::liveSyncExists($team_id, 'google_oauth');
 
-        $team_livesync_exists->add(Pair {$team_id, $team_livesync_types});
+        $team_livesync_exists[$team_id] = $team_livesync_types;
       }
 
       foreach ($team_livesync_exists as $team_id => $livesync_types) {
-        $team_livesync_keys = Map {};
-        $team_livesync_exists_results = await \HH\Asio\m($livesync_types); // TODO: Combine Awaits
-        foreach ($team_livesync_exists_results as
-                 $livesync_type => $livesync_exists) {
+        $team_livesync_keys = [];
+        foreach ($livesync_types as $livesync_type => $livesync_exists) {
           if (boolval($livesync_exists) === true) {
-            $team_livesync_keys->add(
-              Pair {
-                $livesync_type,
-                Team::genGetLiveSyncKey($team_id, $livesync_type),
-              },
-            );
+            $team_livesync_keys[$livesync_type] = Team::getLiveSyncKey($team_id, $livesync_type);
           }
         }
-        $team_livesync_keys->add(
-          Pair {'general', Team::genGetLiveSyncKey($team_id, 'general')},
-        );
-        $team_livesync_keys_results = await \HH\Asio\m($team_livesync_keys); // TODO: Combine Awaits
-        $team_livesync_key->add(Pair {$team_id, $team_livesync_keys_results});
+        $team_livesync_keys['general'] = Team::getLiveSyncKey($team_id, 'general');
+        $team_livesync_key[$team_id] = $team_livesync_keys;
       }
-      $teams_array = $team_livesync_key->toArray();
+      $teams_array = $team_livesync_key;
 
-      $scores_array = array();
-      $scored_teams = array();
+      $scores_array = [];
+      $scored_teams = [];
 
       foreach ($all_scores as $score) {
         if (in_array($score->getTeamId(), array_keys($teams_array)) ===
@@ -109,11 +74,10 @@ class LiveSyncDataController extends DataController {
           continue;
         }
         $team_livesync_array_scores =
-          $team_livesync_key->get($score->getTeamId());
-        invariant(
-          $team_livesync_array_scores instanceof Map,
-          'team_livesync_array_scores should of type Map and not null',
-        );
+          $team_livesync_key[$score->getTeamId()] ?? null;
+        if (!is_array($team_livesync_array_scores)) {
+          throw new RuntimeException('team_livesync_array_scores should be of type array and not null');
+        }
         foreach ($team_livesync_array_scores as
                  $livesync_type => $livesync_key) {
           $scores_array[$score->getLevelId()][$livesync_key]['timestamp'] =
@@ -131,11 +95,10 @@ class LiveSyncDataController extends DataController {
             continue;
           }
           $team_livesync_array_hints =
-            $team_livesync_key->get($hint->getTeamId());
-          invariant(
-            $team_livesync_array_hints instanceof Map,
-            'team_livesync_array_hints should of type Map and not null',
-          );
+            $team_livesync_key[$hint->getTeamId()] ?? null;
+          if (!is_array($team_livesync_array_hints)) {
+            throw new RuntimeException('team_livesync_array_hints should be of type array and not null');
+          }
           foreach ($team_livesync_array_hints as
                    $livesync_type => $livesync_key) {
             $scores_array[$hint->getLevelId()][$livesync_key]['hint'] = true;
@@ -153,51 +116,33 @@ class LiveSyncDataController extends DataController {
         }
       }
 
-      $levels_array = array();
-      $entities = Map {};
-      $categories = Map {};
+      $levels_array = [];
+      $entities = [];
+      $categories = [];
       foreach ($all_levels as $level) {
         $level_id = $level->getId();
-        $entities->add(Pair {$level_id, Country::gen($level->getEntityId())});
-        $categories->add(
-          Pair {
-            $level_id,
-            Category::genSingleCategory($level->getCategoryId()),
-          },
-        );
+        $entities[$level_id] = Country::get($level->getEntityId());
+        $categories[$level_id] = Category::singleCategory($level->getCategoryId());
       }
-      $entities_results = await \HH\Asio\m($entities);
-      invariant(
-        $entities_results instanceof Map,
-        'entities_results should of type Map and not null',
-      );
-
-      $categories_results = await \HH\Asio\m($categories);
-      invariant(
-        $categories_results instanceof Map,
-        'categories_results should of type Map and not null',
-      );
 
       foreach ($all_levels as $level) {
         $level_id = $level->getId();
-        $entity = $entities_results->get($level_id);
-        invariant(
-          $entity instanceof Country,
-          'entity should of type Country and not null',
-        );
+        $entity = $entities[$level_id] ?? null;
+        if (!($entity instanceof Country)) {
+          throw new RuntimeException('entity should be of type Country and not null');
+        }
 
-        $category = $categories_results->get($level_id);
-        invariant(
-          $category instanceof Category,
-          'category should of type Category and not null',
-        );
+        $category = $categories[$level_id] ?? null;
+        if (!($category instanceof Category)) {
+          throw new RuntimeException('category should be of type Category and not null');
+        }
 
         if (array_key_exists($level->getId(), $scores_array)) {
           $score_level_array = $scores_array[$level_id];
         } else {
-          $score_level_array = array();
+          $score_level_array = [];
         }
-        $one_level = array(
+        $one_level = [
           'active' => $level->getActive(),
           'type' => $level->getType(),
           'title' => $level->getTitle(),
@@ -209,7 +154,7 @@ class LiveSyncDataController extends DataController {
           'bonus_dec' => $level->getBonusDec(),
           'penalty' => $level->getPenalty(),
           'teams' => $score_level_array,
-        );
+        ];
         $levels_array[] = $one_level;
       }
 
@@ -234,6 +179,5 @@ class LiveSyncDataController extends DataController {
 
 }
 
-/* HH_IGNORE_ERROR[1002] */
 $syncData = new LiveSyncDataController();
-\HH\Asio\join($syncData->genGenerateData());
+$syncData->sendData();

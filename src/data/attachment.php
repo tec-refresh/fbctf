@@ -1,15 +1,14 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 require_once ($_SERVER['DOCUMENT_ROOT'].'/../vendor/autoload.php');
 
 class AttachmentDataController extends DataController {
-  public async function genGenerateData(): Awaitable<void> {
+  public function generateData(): void {
 
-    /* HH_IGNORE_ERROR[1002] */
     SessionUtils::sessionStart();
     SessionUtils::enforceLogin();
 
-    await tr_start();
+    tr_start();
 
     $data = tr('File Does Not Exist');
     $filename = tr('error');
@@ -17,10 +16,10 @@ class AttachmentDataController extends DataController {
     $attachment_id = idx(Utils::getGET(), 'id', '');
     if (intval($attachment_id) !== 0) {
       $attachment_exists =
-        await Attachment::genCheckExists(intval($attachment_id));
-      $active = await Attachment::checkActive(intval($attachment_id));
+        Attachment::checkExists(intval($attachment_id));
+      $active = Attachment::checkActive(intval($attachment_id));
       if ($attachment_exists === true && $active === true) {
-        $attachment = await Attachment::gen(intval($attachment_id));
+        $attachment = Attachment::get(intval($attachment_id));
         $filename = $attachment->getFilename();
 
         // Remove all non alpahnum characters from filename - allow international chars, dash, underscore, and period
@@ -34,6 +33,5 @@ class AttachmentDataController extends DataController {
   }
 }
 
-/* HH_IGNORE_ERROR[1002] */
 $attachmentData = new AttachmentDataController();
 $attachmentData->sendData();

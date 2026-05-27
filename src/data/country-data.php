@@ -1,21 +1,18 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 require_once ($_SERVER['DOCUMENT_ROOT'].'/../vendor/autoload.php');
 
 class CountryDataController extends DataController {
-  public async function genGenerateData(): Awaitable<void> {
+  public function generateData(): void {
 
-    /* HH_IGNORE_ERROR[1002] */
     SessionUtils::sessionStart();
     SessionUtils::enforceLogin();
 
-    list($my_team, $gameboard, $all_active_levels) = await \HH\Asio\va(
-      MultiTeam::genTeam(SessionUtils::sessionTeam()),
-      Configuration::gen('gameboard'),
-      Level::genAllActiveLevels(),
-    );
+    $my_team = MultiTeam::team(SessionUtils::sessionTeam());
+    $gameboard = Configuration::get('gameboard');
+    $all_active_levels = Level::allActiveLevels();
 
-    $countries_data = (object) array();
+    $countries_data = (object) [];
 
     // If gameboard refresing is disabled, exit
     if ($gameboard->getValue() === '0') {
@@ -24,33 +21,22 @@ class CountryDataController extends DataController {
     }
 
     foreach ($all_active_levels as $level) {
-      $awaitables = Map {
-        'country' => Country::gen(intval($level->getEntityId())),
-        'category' => Category::genSingleCategory($level->getCategoryId()),
-        'attachments_list' => Attachment::genAllAttachmentsFileNamesLinks(
-          $level->getId(),
-        ),
-        'links_list' => Link::genAllLinksValues($level->getId()),
-        'completed_by' => MultiTeam::genCompletedLevelTeamNames(
-          $level->getId(),
-        ),
-      };
-      $awaitables_results = await \HH\Asio\m($awaitables); // TODO: Combine Awaits
-
-      $country = $awaitables_results['country'];
-      $category = $awaitables_results['category'];
-      $attachments_list = $awaitables_results['attachments_list'];
-      $links_list = $awaitables_results['links_list'];
-      $completed_by = $awaitables_results['completed_by'];
-
-      invariant(
-        $country instanceof Country,
-        'country should be of type Country',
+      $country = Country::get(intval($level->getEntityId()));
+      $category = Category::singleCategory($level->getCategoryId());
+      $attachments_list = Attachment::allAttachmentsFileNamesLinks(
+        $level->getId(),
       );
-      invariant(
-        $category instanceof Category,
-        'category should be of type Category',
+      $links_list = Link::allLinksValues($level->getId());
+      $completed_by = MultiTeam::completedLevelTeamNames(
+        $level->getId(),
       );
+
+      if (!($country instanceof Country)) {
+        throw new RuntimeException('country should be of type Country');
+      }
+      if (!($category instanceof Category)) {
+        throw new RuntimeException('category should be of type Category');
+      }
 
       if (!$country) {
         continue;
@@ -62,18 +48,16 @@ class CountryDataController extends DataController {
           $hint_cost = -2;
           $hint = 'no';
         } else {
-          list($hint, $score) = await \HH\Asio\va(
-            HintLog::genPreviousHint(
-              $level->getId(),
-              $my_team->getId(),
-              false,
-            ),
-            ScoreLog::genPreviousScore(
-              $level->getId(),
-              $my_team->getId(),
-              false,
-            ),
-          ); // TODO: Combine Awaits
+          $hint = HintLog::previousHint(
+            $level->getId(),
+            $my_team->getId(),
+            false,
+          );
+          $score = ScoreLog::previousScore(
+            $level->getId(),
+            $my_team->getId(),
+            false,
+          );
 
           // Has this team requested this hint or scored this level before?
           if ($hint || $score) {
@@ -90,12 +74,12 @@ class CountryDataController extends DataController {
 
       // Who is the first owner of this level
       if ($completed_by) {
-        $owner = await MultiTeam::genFirstCapture($level->getId()); // TODO: Combine Awaits
+        $owner = MultiTeam::firstCapture($level->getId());
         $owner = $owner->getName();
       } else {
         $owner = 'Uncaptured';
       }
-      $country_data = (object) array(
+      $country_data = (object) [
         'level_id' => $level->getId(),
         'title' => $level->getTitle(),
         'intro' => $level->getDescription(),
@@ -109,9 +93,7 @@ class CountryDataController extends DataController {
         'hint_cost' => $hint_cost,
         'attachments' => $attachments_list,
         'links' => $links_list,
-      );
-      /* HH_FIXME[1002] */
-      /* HH_FIXME[2011] */
+      ];
       $countries_data->{$country->getName()} = $country_data;
     }
 

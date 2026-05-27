@@ -1,34 +1,33 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 require_once ($_SERVER['DOCUMENT_ROOT'].'/../vendor/autoload.php');
 
 class ScoresDataController extends DataController {
-  public async function genGenerateData(): Awaitable<void> {
+  public function generateData(): void {
 
-    /* HH_IGNORE_ERROR[1002] */
     SessionUtils::sessionStart();
     SessionUtils::enforceLogin();
 
-    $data = array();
+    $data = [];
 
-    $leaderboard = await MultiTeam::genLeaderboard(false);
+    $leaderboard = MultiTeam::leaderboard(false);
     foreach ($leaderboard as $team) {
-      $values = array();
+      $values = [];
       $i = 1;
       $progressive_scoreboard =
-        await Progressive::genProgressiveScoreboard($team->getName()); // TODO: Combine Awaits
+        Progressive::progressiveScoreboard($team->getName());
       foreach ($progressive_scoreboard as $progress) {
         $score =
-          (object) array('time' => $i, 'score' => $progress->getPoints());
+          (object) ['time' => $i, 'score' => $progress->getPoints()];
         array_push($values, $score);
         $i++;
       }
       $color = substr(md5($team->getName()), 0, 6);
-      $element = (object) array(
+      $element = (object) [
         'team' => $team->getName(),
         'color' => '#'.$color,
         'values' => $values,
-      );
+      ];
       array_push($data, $element);
     }
 
@@ -36,6 +35,5 @@ class ScoresDataController extends DataController {
   }
 }
 
-/* HH_IGNORE_ERROR[1002] */
 $scoresData = new ScoresDataController();
 $scoresData->sendData();

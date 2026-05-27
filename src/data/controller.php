@@ -1,12 +1,12 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 abstract class DataController {
 
-  abstract public function genGenerateData(): Awaitable<void>;
+  abstract public function generateData(): void;
 
   public function sendData(): void {
     try {
-      \HH\Asio\join($this->genGenerateData());
+      $this->generateData();
     } catch (RedirectException $e) {
       if (get_class($this) === "SessionController") {
         error_log(
@@ -15,7 +15,7 @@ abstract class DataController {
         http_response_code($e->getStatusCode());
         Utils::redirect($e->getPath());
       } else {
-        $this->jsonSend(array());
+        $this->jsonSend([]);
       }
     }
   }

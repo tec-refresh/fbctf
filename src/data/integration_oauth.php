@@ -1,12 +1,11 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 require_once ($_SERVER['DOCUMENT_ROOT'].'/../vendor/autoload.php');
 
 class IntegrationOAuth {
-  public static async function genProcessOAuth(): Awaitable<void> {
+  public static function processOAuth(): void {
 
     try {
-      /* HH_IGNORE_ERROR[1002] */
       SessionUtils::sessionStart();
       SessionUtils::enforceLogin();
     } catch (RedirectException $e) {
@@ -27,13 +26,13 @@ class IntegrationOAuth {
 
     switch ($type) {
       case "facebook":
-        $status = await self::genProcessFacebookOAuth();
+        $status = self::processFacebookOAuth();
         $provider = "Facebook";
         $container = "facebook-link-response";
         $button = "facebook-oauth-button";
         break;
       case "google":
-        $status = await self::genProcessGoogleOAuth();
+        $status = self::processGoogleOAuth();
         $provider = "Google";
         $container = "google-link-response";
         $button = "google-oauth-button";
@@ -46,16 +45,16 @@ class IntegrationOAuth {
         break;
     }
 
-    await self::genOutput($status, $provider, $container, $button);
+    self::output($status, $provider, $container, $button);
   }
 
-  public static async function genOutput(
+  public static function output(
     bool $status,
     string $provider,
     string $container,
     string $button,
-  ): Awaitable<void> {
-    await tr_start();
+  ): void {
+    tr_start();
     if ($status === true) { //facebook-link-response
       $message =
         tr('Your FBCTF account was successfully linked with '.$provider.'.');
@@ -118,19 +117,19 @@ class IntegrationOAuth {
     print $output;
   }
 
-  public static async function genProcessFacebookOAuth(): Awaitable<bool> {
-    $enabled = await Integration::facebookOAuthEnabled();
+  public static function processFacebookOAuth(): bool {
+    $enabled = Integration::facebookOAuthEnabled();
     if ($enabled === true) {
-      $status = await Integration::genFacebookOAuth();
+      $status = Integration::facebookOAuth();
       return $status;
     }
     return false;
   }
 
-  public static async function genProcessGoogleOAuth(): Awaitable<bool> {
-    $enabled = await Integration::googleOAuthEnabled();
+  public static function processGoogleOAuth(): bool {
+    $enabled = Integration::googleOAuthEnabled();
     if ($enabled === true) {
-      $status = await Integration::genGoogleOAuth();
+      $status = Integration::googleOAuth();
       return $status;
     }
     return false;
@@ -138,6 +137,5 @@ class IntegrationOAuth {
 
 }
 
-/* HH_IGNORE_ERROR[1002] */
 $integration_oauth = new IntegrationOAuth();
-\HH\Asio\join($integration_oauth->genProcessOAuth());
+$integration_oauth->processOAuth();

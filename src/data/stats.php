@@ -1,34 +1,23 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 require_once ($_SERVER['DOCUMENT_ROOT'].'/../vendor/autoload.php');
 
 class StatsController extends DataController {
 
-  public async function genGenerateData(): Awaitable<void> {
+  public function generateData(): void {
 
-    /* HH_IGNORE_ERROR[1002] */
     SessionUtils::sessionStart();
     SessionUtils::enforceLogin();
     SessionUtils::enforceAdmin();
 
-    $stats = array();
+    $stats = [];
 
-    $awaitables = Map {
-      'team_stats' => MultiTeam::genAllTeamsCache(),
-      'session_stats' => Session::genAllSessions(),
-      'level_stats' => Level::genAllLevels(),
-      'active_level_stats' => Level::genAllActiveLevels(),
-      'hint_stats' => HintLog::genAllHints(),
-      'capture_stats' => ScoreLog::genAllScores(),
-    };
-    $awaitables_results = await \HH\Asio\m($awaitables);
-
-    $team_stats = $awaitables['team_stats'];
-    $session_stats = $awaitables['session_stats'];
-    $level_stats = $awaitables['level_stats'];
-    $active_level_stats = $awaitables['active_level_stats'];
-    $hint_stats = $awaitables['hint_stats'];
-    $capture_stats = $awaitables['capture_stats'];
+    $team_stats = MultiTeam::allTeamsCache();
+    $session_stats = Session::allSessions();
+    $level_stats = Level::allLevels();
+    $active_level_stats = Level::allActiveLevels();
+    $hint_stats = HintLog::allHints();
+    $capture_stats = ScoreLog::allScores();
 
     // Number of teams
     $stats['teams'] = count($team_stats);
@@ -63,13 +52,13 @@ class StatsController extends DataController {
     $cpu_stats_2 = file('/proc/stat');
     $cpu_info_1 = explode(" ", preg_replace("!cpu +!", "", $cpu_stats_1[0]));
     $cpu_info_2 = explode(" ", preg_replace("!cpu +!", "", $cpu_stats_2[0]));
-    $cpu_diff = array();
+    $cpu_diff = [];
     $cpu_diff['user'] = $cpu_info_2[0] - $cpu_info_1[0];
     $cpu_diff['nice'] = $cpu_info_2[1] - $cpu_info_1[1];
     $cpu_diff['sys'] = $cpu_info_2[2] - $cpu_info_1[2];
     $cpu_diff['idle'] = $cpu_info_2[3] - $cpu_info_1[3];
     $cpu_total = array_sum($cpu_diff);
-    $cpu_stats = array();
+    $cpu_stats = [];
     foreach ($cpu_diff as $x => $y)
       $cpu_stats[$x] = round($y / $cpu_total * 100, 1);
     $stats['cpu'] = $cpu_stats;
@@ -78,6 +67,5 @@ class StatsController extends DataController {
   }
 }
 
-/* HH_IGNORE_ERROR[1002] */
 $statsController = new StatsController();
 $statsController->sendData();

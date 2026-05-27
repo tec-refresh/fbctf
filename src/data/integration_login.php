@@ -1,12 +1,11 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 require_once ($_SERVER['DOCUMENT_ROOT'].'/../vendor/autoload.php');
 
-/* HH_IGNORE_ERROR[1002] */
 SessionUtils::sessionStart();
 
 class IntegrationLogin {
-  public static async function genProcessLogin(): Awaitable<void> {
+  public static function processLogin(): void {
     $type = idx(Utils::getGET(), 'type');
 
     if (!is_string($type)) {
@@ -15,10 +14,10 @@ class IntegrationLogin {
 
     switch ($type) {
       case "facebook":
-        await self::genProcessFacebookLogin();
+        self::processFacebookLogin();
         break;
       case "google":
-        await self::genProcessGoogleLogin();
+        self::processGoogleLogin();
         break;
         // FALLTHROUGH
       default:
@@ -28,10 +27,10 @@ class IntegrationLogin {
     }
   }
 
-  public static async function genProcessFacebookLogin(): Awaitable<void> {
-    $enabled = await Integration::facebookLoginEnabled();
+  public static function processFacebookLogin(): void {
+    $enabled = Integration::facebookLoginEnabled();
     if ($enabled === true) {
-      $url = await Integration::genFacebookLogin();
+      $url = Integration::facebookLogin();
       header('Location: '.filter_var($url, FILTER_SANITIZE_URL));
       exit;
     } else {
@@ -40,10 +39,10 @@ class IntegrationLogin {
     }
   }
 
-  public static async function genProcessGoogleLogin(): Awaitable<void> {
-    $enabled = await Integration::googleLoginEnabled();
+  public static function processGoogleLogin(): void {
+    $enabled = Integration::googleLoginEnabled();
     if ($enabled === true) {
-      $url = await Integration::genGoogleLogin();
+      $url = Integration::googleLogin();
       header('Location: '.filter_var($url, FILTER_SANITIZE_URL));
       exit;
     } else {
@@ -54,4 +53,4 @@ class IntegrationLogin {
 }
 
 $integration_login = new IntegrationLogin();
-\HH\Asio\join($integration_login->genProcessLogin());
+$integration_login->processLogin();
