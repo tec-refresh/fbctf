@@ -461,7 +461,7 @@ class IndexController extends Controller {
         $login_select = "on";
         $login_team = '<select name="team_id" >';
         $login_team .= '<option value="0">' . htmlspecialchars(tr('Select')) . '</option>';
-        $all_active_teams = MultiTeam::getAllActiveTeams();
+        $all_active_teams = MultiTeam::allActiveTeams();
         foreach ($all_active_teams as $team) {
           error_log('Getting '.$team->getName());
           $login_team .= '<option value="' . htmlspecialchars(strval($team->getId())) . '">' . htmlspecialchars($team->getName()) . '</option>';

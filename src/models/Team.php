@@ -108,7 +108,7 @@ class Team extends Model implements Importable, Exportable {
   public static function exportAll(
   ): array {
     $all_teams_data = [];
-    $all_teams = self::getAllTeams();
+    $all_teams = self::allTeams();
 
     foreach ($all_teams as $team) {
       $team_data = self::teamData($team->getId());
@@ -176,12 +176,12 @@ class Team extends Model implements Importable, Exportable {
 
       // Check if ldap is enabled and verify credentials if successful
       // An exception is admin user, which is verified locally
-      $ldap = Configuration::gen('ldap');
+      $ldap = Configuration::get('ldap');
       if ($ldap->getValue() === '1' && !$team->getAdmin()) {
         // Get server information from configuration
-        $ldap_server = Configuration::gen('ldap_server');
-        $ldap_port = Configuration::gen('ldap_port');
-        $ldap_domain_suffix = Configuration::gen('ldap_domain_suffix');
+        $ldap_server = Configuration::get('ldap_server');
+        $ldap_port = Configuration::get('ldap_port');
+        $ldap_domain_suffix = Configuration::get('ldap_domain_suffix');
         $ldapconn = ldap_connect(
           $ldap_server->getValue(),
           intval($ldap_port->getValue()),
@@ -545,7 +545,7 @@ class Team extends Model implements Importable, Exportable {
   }
 
   // All active teams.
-  public static function getAllActiveTeams(): array {
+  public static function allActiveTeams(): array {
     $db = Db::getInstance();
 
     $result =
@@ -560,7 +560,7 @@ class Team extends Model implements Importable, Exportable {
   }
 
   // All visible teams.
-  public static function getAllVisibleTeams(): array {
+  public static function allVisibleTeams(): array {
     $db = Db::getInstance();
 
     $result = $db->query(
@@ -593,7 +593,7 @@ class Team extends Model implements Importable, Exportable {
   }
 
   // All teams.
-  public static function getAllTeams(): array {
+  public static function allTeams(): array {
     $db = Db::getInstance();
 
     $result = $db->query('SELECT * FROM teams ORDER BY points DESC');

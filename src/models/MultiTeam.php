@@ -82,7 +82,7 @@ class MultiTeam extends Team {
   }
 
   public static function setLeaderboardLimitValue(): int {
-    $leaderboard_limit = Configuration::gen('leaderboard_limit');
+    $leaderboard_limit = Configuration::get('leaderboard_limit');
     self::setMCRecords('LEADERBOARD_LIMIT', $leaderboard_limit->getValue());
     return intval($leaderboard_limit->getValue());
   }
@@ -92,9 +92,9 @@ class MultiTeam extends Team {
     bool $limit = true,
     bool $refresh = false,
   ): array {
-    $leaderboard_limit = Configuration::gen('leaderboard_limit');
+    $leaderboard_limit = Configuration::get('leaderboard_limit');
     $leaderboard_limit_cache = self::leaderboardLimit();
-    $visible_teams = self::getAllVisibleTeams();
+    $visible_teams = self::allVisibleTeams();
 
     $teams_count = count($visible_teams);
     $mc_result = self::getMCRecords('LEADERBOARD');
@@ -178,7 +178,7 @@ class MultiTeam extends Team {
   }
 
   // All active teams.
-  public static function getAllActiveTeams(
+  public static function allActiveTeams(
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_ACTIVE_TEAMS');
@@ -199,7 +199,7 @@ class MultiTeam extends Team {
   }
 
   // All visible teams.
-  public static function getAllVisibleTeams(
+  public static function allVisibleTeams(
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_VISIBLE_TEAMS');

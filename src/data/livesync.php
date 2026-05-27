@@ -17,7 +17,7 @@ class LiveSyncDataController extends DataController {
           strval($input_auth_key),
         )) {
 
-      $all_teams = Team::getAllTeams();
+      $all_teams = Team::allTeams();
       $all_scores = ScoreLog::allScores();
       $all_hints = HintLog::allHints();
       $all_levels = Level::allLevels();

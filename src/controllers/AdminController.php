@@ -47,7 +47,7 @@ class AdminController extends Controller {
       $select .= '<option value="' . htmlspecialchars(strval($country->getId())) . '" selected>' . htmlspecialchars($country->getName()) . '</option>';
     }
 
-    $countries = Country::getAllAvailableCountries();
+    $countries = Country::allAvailableCountries();
     foreach ($countries as $country) {
       $select .= '<option value="' . htmlspecialchars(strval($country->getId())) . '">' . htmlspecialchars($country->getName()) . '</option>';
     }
@@ -61,7 +61,7 @@ class AdminController extends Controller {
   private function generateLevelCategoriesSelect(
     int $selected,
   ): string {
-    $categories = Category::getAllCategories();
+    $categories = Category::allCategories();
     $select =
       '<select class="not_configuration" name="category_id" disabled >';
 
@@ -84,7 +84,7 @@ class AdminController extends Controller {
   }
 
   private function generateFilterCategoriesSelect(): string {
-    $categories = Category::getAllCategories();
+    $categories = Category::allCategories();
     $select = '<select class="not_configuration" name="category_filter" >';
 
     $select .= '<option class="filter_option" value="all" selected>' . htmlspecialchars(tr('All Categories')) . '</option>';
@@ -114,8 +114,8 @@ class AdminController extends Controller {
   // TODO: Translate password types
   private function strongPasswordsSelect(): string {
     list($types, $config) = [
-      Configuration::getAllPasswordTypes(),
-      Configuration::getCurrentPasswordType(),
+      Configuration::allPasswordTypes(),
+      Configuration::currentPasswordType(),
     ];
     $select = '<select name="fb--conf--password_type">' . '</select>';
     foreach ($types as $type) {
@@ -162,7 +162,7 @@ class AdminController extends Controller {
 
   public function renderConfigurationTokens(): string {
     $tokens_table = '<table>';
-    $tokens = Token::getAllTokens();
+    $tokens = Token::allTokens();
     foreach ($tokens as $token) {
       if ($token->getUsed()) {
         $team = MultiTeam::team($token->getTeamId()); // TODO: Combine Awaits
@@ -387,7 +387,7 @@ class AdminController extends Controller {
   }
 
   public function renderAnnouncementsContent(): string {
-    $announcements = Announcement::getAllAnnouncements();
+    $announcements = Announcement::allAnnouncements();
     $announcements_div = '<div>';
     if ($announcements) {
       foreach ($announcements as $announcement) {
@@ -412,7 +412,7 @@ class AdminController extends Controller {
       '<div class="admin-sections">' . '<section id="new-element" class="validate-form admin-box completely-hidden">' . '<form class="level_form quiz_form">' . '<input type="hidden" name="level_type" value="quiz" />' . '<header class="admin-box-header">' . '<h3>' . htmlspecialchars(tr('New Quiz Level')) . '</h3>' . '</header>' . '<div class="fb-column-container">' . '<div class="col col-pad col-1-2">' . '<div class="form-el form-el--required el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Title')) . '</label>' . '<input name="title" type="text" placeholder="' . htmlspecialchars(tr('Level title')) . '" />' . '</div>' . '<div class="form-el form-el--required el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Question')) . '</label>' . '<textarea name="question" placeholder="' . htmlspecialchars(tr('Quiz question')) . '" rows="' . "4" . '">' . '</textarea>' . '</div>' . '<div class="form-el el--block-label el--full-text">' . '<label for="">' . htmlspecialchars(tr('Country')) . '</label>' . $countries_select . '</div>' . '</div>' . '<div class="col col-pad col-1-2">' . '<div class="form-el fb-column-container col-gutters">' . '<div class="form-el--required col col-2-3 el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Answer')) . '</label>' . '<input name="answer" type="text" />' . '</div>' . '<div class="form-el--required col col-1-3 el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Points')) . '</label>' . '<input name="points" type="text" />' . '</div>' . '</div>' . '<div class="form-el fb-column-container col-gutters">' . '<div class="col col-2-3 el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Hint')) . '</label>' . '<input name="hint" type="text" />' . '</div>' . '<div class="col col-1-3 el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Hint Penalty')) . '</label>' . '<input name="penalty" type="text" />' . '</div>' . '</div>' . '</div>' . '</div>' . '<div class="admin-buttons admin-row">' . '<div class="button-right">' . '<a href="#" class="admin--edit" data-action="edit">' . htmlspecialchars(tr('EDIT')) . '</a>' . '<button class="fb-cta cta--red" data-action="delete">' . htmlspecialchars(tr('Delete')) . '</button>' . '<button class="fb-cta cta--yellow" data-action="create">' . htmlspecialchars(tr('Create')) . '</button>' . '</div>' . '</div>' . '</form>' . '</section>' . '<section id="new-element" class="admin-box">' . '<header class="admin-box-header">' . '<h3>' . htmlspecialchars(tr('All Quiz Levels')) . '</h3>' . '<form class="all_quiz_form">' . '<div class="admin-section-toggle radio-inline col">' . '<input type="radio" name="fb--levels--all_quiz" id="fb--levels--all_quiz--on" />' . '<label for="fb--levels--all_quiz--on">' . htmlspecialchars(tr('On')) . '</label>' . '<input type="radio" name="fb--levels--all_quiz" id="fb--levels--all_quiz--off" />' . '<label for="fb--levels--all_quiz--off">' . htmlspecialchars(tr('Off')) . '</label>' . '</div>' . '</form>' . '</header>' . '<header class="admin-box-header">' . '<h3>' . htmlspecialchars(tr('Filter By:')) . '</h3>' . '<div class="form-el fb-column-container col-gutters">' . '<div class="col col-1-5 el--block-label el--full-text">' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '<select class="not_configuration" name="status_filter">' . '<option class="filter_option" value="all">' . htmlspecialchars(tr('All Status')) . '</option>' . '<option class="filter_option" value="Enabled">' . htmlspecialchars(tr('Enabled')) . '</option>' . '<option class="filter_option" value="Disabled">' . htmlspecialchars(tr('Disabled')) . '</option>' . '</select>' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '</div>' . '</div>' . '</header>' . '</section>' . '</div>';
 
     $c = 1;
-    $quizes = Level::getAllQuizLevels();
+    $quizes = Level::allQuizLevels();
     foreach ($quizes as $quiz) {
       $quiz_active_on = ($quiz->getActive());
       $quiz_active_off = (!$quiz->getActive());
@@ -456,7 +456,7 @@ class AdminController extends Controller {
       '<div class="admin-sections">' . '<section id="new-element" class="validate-form admin-box completely-hidden">' . '<form class="level_form flag_form">' . '<input type="hidden" name="level_type" value="flag" />' . '<header class="admin-box-header">' . '<h3>' . htmlspecialchars(tr('New Flag Level')) . '</h3>' . '</header>' . '<div class="fb-column-container">' . '<div class="col col-pad col-1-2">' . '<div class="form-el form-el--required el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Title')) . '</label>' . '<input name="title" type="text" placeholder="' . htmlspecialchars(tr('Level title')) . '" />' . '</div>' . '<div class="form-el form-el--required el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Description')) . '</label>' . '<textarea name="description" placeholder="' . htmlspecialchars(tr('Level description')) . '" rows="' . "4" . '">' . '</textarea>' . '</div>' . '<div class="form-el form-el--required fb-column-container col-gutters">' . '<div class="col col-1-2 el--block-label el--full-text">' . '<label for="">' . htmlspecialchars(tr('Country')) . '</label>' . $countries_select . '</div>' . '<div class="col col-1-2 el--block-label el--full-text">' . '<label for="">' . htmlspecialchars(tr('Category')) . '</label>' . $level_categories_select . '</div>' . '</div>' . '</div>' . '<div class="col col-pad col-1-2">' . '<div class="form-el fb-column-container col-gutters">' . '<div class="form-el--required col col-2-3 el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Flag')) . '</label>' . '<input name="flag" type="text" />' . '</div>' . '<div class="form-el--required col col-1-3 el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Points')) . '</label>' . '<input name="points" type="text" />' . '</div>' . '</div>' . '<div class="form-el fb-column-container col-gutters">' . '<div class="col col-2-3 el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Hint')) . '</label>' . '<input name="hint" type="text" />' . '</div>' . '<div class="col col-1-3 el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Hint Penalty')) . '</label>' . '<input name="penalty" type="text" />' . '</div>' . '</div>' . '</div>' . '</div>' . '<div class="admin-buttons admin-row">' . '<div class="button-right">' . '<a href="#" class="admin--edit" data-action="edit">' . htmlspecialchars(tr('EDIT')) . '</a>' . '<button class="fb-cta cta--red" data-action="delete">' . htmlspecialchars(tr('Delete')) . '</button>' . '<button class="fb-cta cta--yellow" data-action="create">' . htmlspecialchars(tr('Create')) . '</button>' . '</div>' . '</div>' . '</form>' . '</section>' . '<section id="new-element" class="admin-box">' . '<header class="admin-box-header">' . '<h3>' . htmlspecialchars(tr('All Flag Levels')) . '</h3>' . '<form class="all_flag_form">' . '<div class="admin-section-toggle radio-inline col">' . '<input type="radio" name="fb--levels--all_flag" id="fb--levels--all_flag--on" />' . '<label for="fb--levels--all_flag--on">' . htmlspecialchars(tr('On')) . '</label>' . '<input type="radio" name="fb--levels--all_flag" id="fb--levels--all_flag--off" />' . '<label for="fb--levels--all_flag--off">' . htmlspecialchars(tr('Off')) . '</label>' . '</div>' . '</form>' . '</header>' . '<header class="admin-box-header">' . '<h3>' . htmlspecialchars(tr('Filter By:')) . '</h3>' . '<div class="form-el fb-column-container col-gutters">' . '<div class="col col-1-5 el--block-label el--full-text">' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . $filter_categories_select . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '<select class="not_configuration" name="status_filter">' . '<option class="filter_option" value="all">' . htmlspecialchars(tr('All Status')) . '</option>' . '<option class="filter_option" value="Enabled">' . htmlspecialchars(tr('Enabled')) . '</option>' . '<option class="filter_option" value="Disabled">' . htmlspecialchars(tr('Disabled')) . '</option>' . '</select>' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '</div>' . '</div>' . '</header>' . '</section>' . '</div>';
 
     $c = 1;
-    $flags = Level::getAllFlagLevels();
+    $flags = Level::allFlagLevels();
     foreach ($flags as $flag) {
       $flag_active_on = ($flag->getActive());
       $flag_active_off = (!$flag->getActive());
@@ -481,7 +481,7 @@ class AdminController extends Controller {
       if ($attachments) {
         $a_c = 1;
         $all_attachments =
-          Attachment::getAllAttachments($flag->getId()); // TODO: Combine Awaits
+          Attachment::allAttachments($flag->getId()); // TODO: Combine Awaits
         foreach ($all_attachments as $attachment) {
           $attachments_div .= '<div class="existing-attachment fb-column-container">' . '<div class="col col-pad col-2-3">' . '<div class="form-el">' . '<form class="attachment_form">' . '<input type="hidden" name="attachment_id" value="' . htmlspecialchars(strval($attachment->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Attachment')) . htmlspecialchars($a_c) . ':' . '</label>' . '<input name="filename" type="text" value="' . htmlspecialchars($attachment->getFilename()) . '" disabled />' . '<a href="' . htmlspecialchars($attachment->getFileLink()) . '" target="_blank">' . htmlspecialchars(tr('Link')) . '</a>' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-attachment">' . 'X' . '</button>' . '</div>' . '</div>' . '</div>';
           $a_c++;
@@ -494,7 +494,7 @@ class AdminController extends Controller {
       $links = Link::hasLinks($flag->getId()); // TODO: Combine Awaits
       if ($links) {
         $l_c = 1;
-        $all_links = Link::getAllLinks($flag->getId()); // TODO: Combine Awaits
+        $all_links = Link::allLinks($flag->getId()); // TODO: Combine Awaits
         foreach ($all_links as $link) {
           $links_div .= '<div class="existing-link fb-column-container">' . '<div class="col col-pad col-2-3">' . '<div class="form-el">' . '<form class="link_form">' . '<input type="hidden" name="link_id" value="' . htmlspecialchars(strval($link->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Link')) . htmlspecialchars($l_c) . ':' . '</label>' . '<input name="link" type="text" value="' . htmlspecialchars($link->getLink()) . '" disabled />' . '<a href="' . htmlspecialchars($link->getLink()) . '" target="_blank">' . htmlspecialchars(tr('Link')) . '</a>' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-link">' . 'X' . '</button>' . '</div>' . '</div>' . '</div>';
           $l_c++;
@@ -529,7 +529,7 @@ class AdminController extends Controller {
       '<div class="admin-sections">' . '<section id="new-element" class="validate-form admin-box completely-hidden">' . '<form class="level_form base_form">' . '<input type="hidden" name="level_type" value="base" />' . '<header class="admin-box-header">' . '<h3>' . htmlspecialchars(tr('New Base Level')) . '</h3>' . '</header>' . '<div class="fb-column-container">' . '<div class="col col-pad col-1-2">' . '<div class="form-el form-el--required el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Title')) . '</label>' . '<input name="title" type="text" placeholder="' . htmlspecialchars(tr('Level title')) . '" />' . '</div>' . '<div class="form-el form-el--required el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Description')) . '</label>' . '<textarea name="description" placeholder="' . htmlspecialchars(tr('Level description')) . '" rows="' . "4" . '">' . '</textarea>' . '</div>' . '<div class="form-el fb-column-container col-gutters">' . '<div class="col col-1-2 el--block-label el--full-text">' . '<label for="">' . htmlspecialchars(tr('Country')) . '</label>' . $countries_select . '</div>' . '<div class="col col-1-2 el--block-label el--full-text">' . '<label for="">' . htmlspecialchars(tr('Category')) . '</label>' . $level_categories_select . '</div>' . '</div>' . '</div>' . '<div class="col col-pad col-1-2">' . '<div class="form-el fb-column-container col-gutters">' . '<div class="form-el--required col col-1-2 el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Keep Points')) . '</label>' . '<input name="points" type="text" />' . '</div>' . '<div class="form-el--required col col-1-2 el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Capture points')) . '</label>' . '<input name="bonus" type="text" />' . '</div>' . '</div>' . '<div class="form-el fb-column-container col-gutters">' . '<div class="col col-2-3 el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Hint')) . '</label>' . '<input name="hint" type="text" />' . '</div>' . '<div class="col col-1-3 el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Hint Penalty')) . '</label>' . '<input name="penalty" type="text" />' . '</div>' . '</div>' . '</div>' . '</div>' . '<div class="admin-buttons admin-row">' . '<div class="button-right">' . '<a href="#" class="admin--edit" data-action="edit">' . htmlspecialchars(tr('EDIT')) . '</a>' . '<button class="fb-cta cta--red" data-action="delete">' . htmlspecialchars(tr('Delete')) . '</button>' . '<button class="fb-cta cta--yellow" data-action="create">' . htmlspecialchars(tr('Create')) . '</button>' . '</div>' . '</div>' . '</form>' . '</section>' . '<section id="new-element" class="admin-box">' . '<header class="admin-box-header">' . '<h3>' . htmlspecialchars(tr('All Base Levels')) . '</h3>' . '<form class="all_base_form">' . '<div class="admin-section-toggle radio-inline col">' . '<input type="radio" name="fb--levels--all_base" id="fb--levels--all_base--on" />' . '<label for="fb--levels--all_base--on">' . htmlspecialchars(tr('On')) . '</label>' . '<input type="radio" name="fb--levels--all_base" id="fb--levels--all_base--off" />' . '<label for="fb--levels--all_base--off">' . htmlspecialchars(tr('Off')) . '</label>' . '</div>' . '</form>' . '</header>' . '<header class="admin-box-header">' . '<h3>' . htmlspecialchars(tr('Filter By:')) . '</h3>' . '<div class="form-el fb-column-container col-gutters">' . '<div class="col col-1-5 el--block-label el--full-text">' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . $filter_categories_select . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '<select class="not_configuration" name="status_filter">' . '<option class="filter_option" value="all">' . htmlspecialchars(tr('All Status')) . '</option>' . '<option class="filter_option" value="Enabled">' . htmlspecialchars(tr('Enabled')) . '</option>' . '<option class="filter_option" value="Disabled">' . htmlspecialchars(tr('Disabled')) . '</option>' . '</select>' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '</div>' . '</div>' . '</header>' . '</section>' . '</div>';
 
     $c = 1;
-    $all_base_levels = Level::getAllBaseLevels();
+    $all_base_levels = Level::allBaseLevels();
     foreach ($all_base_levels as $base) {
       $base_active_on = ($base->getActive());
       $base_active_off = (!$base->getActive());
@@ -553,7 +553,7 @@ class AdminController extends Controller {
       if ($has_attachments) {
         $a_c = 1;
         $all_attachments =
-          Attachment::getAllAttachments($base->getId()); // TODO: Combine Awaits
+          Attachment::allAttachments($base->getId()); // TODO: Combine Awaits
         foreach ($all_attachments as $attachment) {
           $attachments_div .= '<div class="existing-attachment fb-column-container">' . '<div class="col col-pad col-2-3">' . '<div class="form-el">' . '<form class="attachment_form">' . '<input type="hidden" name="attachment_id" value="' . htmlspecialchars(strval($attachment->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Attachment')) . htmlspecialchars($a_c) . ':' . '</label>' . '<input name="filename" type="text" value="' . htmlspecialchars($attachment->getFilename()) . '" disabled />' . '<a href="' . htmlspecialchars($attachment->getFileLink()) . '" target="_blank">' . htmlspecialchars(tr('Link')) . '</a>' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-attachment">' . 'X' . '</button>' . '</div>' . '</div>' . '</div>';
         }
@@ -566,7 +566,7 @@ class AdminController extends Controller {
       $has_links = Link::hasLinks($base->getId()); // TODO: Combine Awaits
       if ($has_links) {
         $l_c = 1;
-        $all_links = Link::getAllLinks($base->getId()); // TODO: Combine Awaits
+        $all_links = Link::allLinks($base->getId()); // TODO: Combine Awaits
         foreach ($all_links as $link) {
           if (filter_var($link->getLink(), FILTER_VALIDATE_URL)) {
             $link_a =
@@ -597,7 +597,7 @@ class AdminController extends Controller {
 
     $adminsections .= '<section class="admin-box completely-hidden">' . '<form class="categories_form">' . '<header class="admin-box-header">' . '<h3>' . htmlspecialchars(tr('New Category')) . '</h3>' . '</header>' . '<div class="fb-column-container">' . '<div class="col col-pad">' . '<div class="form-el el--block-label el--full-text">' . '<label class="admin-label" for="">' . htmlspecialchars(tr('Category')) . ':' . '</label>' . '<input name="category" type="text" value="" />' . '</div>' . '</div>' . '</div>' . '<div class="admin-buttons admin-row">' . '<div class="button-right">' . '<button class="fb-cta cta--red" data-action="delete">' . htmlspecialchars(tr('Delete')) . '</button>' . '<button class="fb-cta cta--yellow" data-action="create">' . htmlspecialchars(tr('Create')) . '</button>' . '</div>' . '</div>' . '</form>' . '</section>';
 
-    $categories = Category::getAllCategories();
+    $categories = Category::allCategories();
 
     foreach ($categories as $category) {
       if ($category->getProtected()) {
@@ -628,7 +628,7 @@ class AdminController extends Controller {
 
     $adminsections .= '<section id="new-element" class="admin-box">' . '<header class="admin-box-header">' . '<h3>' . htmlspecialchars(tr('Filter By:')) . '</h3>' . '<div class="form-el fb-column-container col-gutters">' . '<div class="col col-1-5 el--block-label el--full-text">' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '<select class="not_configuration" name="use_filter">' . '<option class="filter_option" value="all">' . htmlspecialchars(tr('All Countries')) . '</option>' . '<option class="filter_option" value="Yes">' . htmlspecialchars(tr('In Use')) . '</option>' . '<option class="filter_option" value="No">' . htmlspecialchars(tr('Not Used')) . '</option>' . '</select>' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '<select class="not_configuration" name="country_status_filter">' . '<option class="filter_option" value="all">' . htmlspecialchars(tr('All Status')) . '</option>' . '<option class="filter_option" value="enabled">' . htmlspecialchars(tr('Enabled')) . '</option>' . '<option class="filter_option" value="disabled">' . htmlspecialchars(tr('Disabled')) . '</option>' . '</select>' . '</div>' . '<div class="col col-1-5 el--block-label el--full-text">' . '</div>' . '</div>' . '</header>' . '</section>';
 
-    $all_countries = Country::getAllCountries();
+    $all_countries = Country::allCountries();
     foreach ($all_countries as $country) {
       $using_country = Level::whoUses($country->getId()); // TODO: Combine Awaits
       $current_use = ($using_country) ? tr('Yes') : tr('No');
@@ -674,7 +674,7 @@ class AdminController extends Controller {
 
   private function generateTeamScores(int $team_id): string {
     $scores_div = '<div>';
-    $scores = ScoreLog::getAllScoresByTeam($team_id, true);
+    $scores = ScoreLog::allScoresByTeam($team_id, true);
     if (count($scores) > 0) {
       $scores_tbody = '<tbody>';
       foreach ($scores as $score) {
@@ -697,7 +697,7 @@ class AdminController extends Controller {
     int $team_id,
   ): string {
     $failures_div = '<div>';
-    $failures = FailureLog::getAllFailuresByTeam($team_id);
+    $failures = FailureLog::allFailuresByTeam($team_id);
     if (count($failures) > 0) {
       $failures_tbody = '<tbody>';
       foreach ($failures as $failure) {
@@ -756,7 +756,7 @@ class AdminController extends Controller {
       '<div class="admin-sections">' . '<section class="admin-box validate-form section-locked completely-hidden">' . '<form class="team_form">' . '<header class="admin-box-header">' . '<h3>' . htmlspecialchars(tr('New Team')) . '</h3>' . '</header>' . '<div class="fb-column-container">' . '<div class="col col-pad col-1-2">' . '<div class="form-el--required el--block-label el--full-text">' . '<label class="admin-label" for="">' . htmlspecialchars(tr('Team Name')) . '</label>' . '<input name="team_name" type="text" value="" maxlength="' . "20" . '" />' . '</div>' . '</div>' . '<div class="col col-pad col-1-2">' . '<div class="form-el--required el--block-label el--full-text">' . '<label class="admin-label" for="">' . htmlspecialchars(tr('Password')) . '</label>' . '<input name="password" type="password" value="" />' . '</div>' . '</div>' . '</div>' . '<div class="admin-row el--block-label">' . '<label>' . htmlspecialchars(tr('Team Logo')) . '</label>' . '<div class="fb-column-container">' . '<div class="col col-shrink">' . '<div class="post-avatar has-avatar">' . '<svg class="icon icon--badge">' . '<use href="#icon--badge-" />' . '</svg>' . '</div>' . '</div>' . '<div class="form-el--required col col-grow">' . '<div class="selected-logo">' . '<label>' . htmlspecialchars(tr('Selected Logo:')) . '</label>' . '<span class="logo-name">' . '</span>' . '</div>' . '<a href="#" class="alt-link js-choose-logo">' . htmlspecialchars(tr('Select Logo')) . '</a>' . '</div>' . '<div class="col col-shrink admin-buttons">' . '<a href="#" class="admin--edit" data-action="edit">' . htmlspecialchars(tr('EDIT')) . '</a>' . '<button class="fb-cta cta--red" data-action="delete">' . htmlspecialchars(tr('Delete')) . '</button>' . '<button class="fb-cta cta--yellow js-confirm-save" data-action="create">' . htmlspecialchars(tr('Create')) . '</button>' . '</div>' . '</div>' . '</div>' . '</form>' . '</section>' . '<section class="admin-box">' . '<header class="admin-box-header">' . '<h3>' . htmlspecialchars(tr('All Teams')) . '</h3>' . '<form class="all_team_form">' . '<div class="admin-section-toggle radio-inline col">' . '<input type="radio" name="fb--teams--all_team" id="fb--teams--all_team--on" />' . '<label for="fb--teams--all_team--on">' . htmlspecialchars(tr('On')) . '</label>' . '<input type="radio" name="fb--teams--all_team" id="fb--teams--all_team--off" />' . '<label for="fb--teams--all_team--off">' . htmlspecialchars(tr('Off')) . '</label>' . '</div>' . '</form>' . '</header>' . '</section>' . '</div>';
 
     $c = 1;
-    $all_teams = Team::getAllTeams();
+    $all_teams = Team::allTeams();
     foreach ($all_teams as $team) {
       $logo_model = $team->getLogoModel(); // TODO: Combine Awaits
       if ($logo_model->getCustom()) {
@@ -838,7 +838,7 @@ class AdminController extends Controller {
   public function renderLogosContent(): string {
     $adminsections = '<div class="admin-sections">' . '</div>';
 
-    $all_logos = Logo::getAllLogos();
+    $all_logos = Logo::allLogos();
 
     foreach ($all_logos as $logo) {
       if ($logo->getCustom()) {
@@ -880,7 +880,7 @@ class AdminController extends Controller {
     $adminsections = '<div class="admin-sections">' . '</div>';
 
     $c = 1;
-    $all_sessions = Session::getAllSessions();
+    $all_sessions = Session::allSessions();
     foreach ($all_sessions as $session) {
       $cookie = $_COOKIE['FBCTF'];
       if ($cookie === $session->getCookie()) {
