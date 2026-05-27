@@ -1,11 +1,10 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class Session extends Model {
 
   protected static string $MC_KEY = 'sessions:';
 
-  protected static Map<string, string>
-    $MC_KEYS = Map {'SESSIONS' => 'active_sessions:'};
+  protected static array $MC_KEYS = ['SESSIONS' => 'active_sessions:'];
 
   private function __construct(
     private int $id,
@@ -54,45 +53,43 @@ class Session extends Model {
     return intval($unserialized);
   }
 
-  public static async function genSetTeamId(
+  public static function setTeamId(
     string $cookie,
     string $data,
-  ): Awaitable<void> {
-    await self::genSetTeamIdCacheSession($cookie, $data);
+  ): void {
+    self::setTeamIdCacheSession($cookie, $data);
     if (Router::isRequestModal() ||
         Router::isRequestAjax() ||
         !Router::isRequestRouter()) {
       return;
     }
     $team_id = self::decodeTeamId($data);
-    $db = await self::genDb();
-    await $db->queryf(
-      'UPDATE sessions SET team_id = %d WHERE cookie = %s LIMIT 1',
-      $team_id,
-      $cookie,
+    $db = Db::getInstance();
+    $db->query(
+      'UPDATE sessions SET team_id = ? WHERE cookie = ? LIMIT 1',
+      [$team_id, $cookie],
     );
   }
 
-  public static async function genSetTeamIdCacheSession(
+  public static function setTeamIdCacheSession(
     string $cookie,
     string $data,
-  ): Awaitable<void> {
-    $sessions = Map {};
-    $session_data = Map {};
+  ): void {
+    $sessions = [];
+    $session_data = [];
     $mc_result = self::getMCSession($cookie);
     if ($mc_result) {
-      invariant(
-        $mc_result instanceof Session,
-        'mc_result should be of type Session',
-      );
+      if (!($mc_result instanceof Session)) {
+        throw new RuntimeException('mc_result should be of type Session');
+      }
       $mc_result->team_id = self::decodeTeamId($data);
       self::setMCSession($cookie, $mc_result);
     } else {
-      await self::genCreateCacheSession($cookie);
+      self::createCacheSession($cookie);
     }
   }
 
-  private static function sessionFromRow(Map<string, string> $row): Session {
+  private static function sessionFromRow(array $row): Session {
     return new Session(
       intval(must_have_idx($row, 'id')),
       must_have_idx($row, 'cookie'),
@@ -105,91 +102,92 @@ class Session extends Model {
   }
 
   // Create new session.
-  public static async function genCreate(
+  public static function create(
     string $cookie,
     string $data,
-  ): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf(
-      'INSERT INTO sessions (cookie, data, created_ts, last_access_ts, team_id, last_page_access) VALUES (%s, %s, NOW(), NOW(), 0, %s)',
-      $cookie,
-      $data,
-      Router::getRequestedPage(),
+  ): void {
+    $db = Db::getInstance();
+    $db->query(
+      'INSERT INTO sessions (cookie, data, created_ts, last_access_ts, team_id, last_page_access) VALUES (?, ?, NOW(), NOW(), 0, ?)',
+      [$cookie, $data, Router::getRequestedPage()],
     );
     if ($data !== '') {
-      await self::genCreateCacheSession($cookie);
+      self::createCacheSession($cookie);
     }
   }
 
   // Create new session.
-  public static async function genCreateCacheSession(
+  public static function createCacheSession(
     string $cookie,
-  ): Awaitable<void> {
-    $session_data = await self::gen($cookie, true);
+  ): void {
+    $session_data = self::sessionExistGet($cookie, true);
     self::setMCSession($cookie, $session_data);
   }
 
   // Retrieve the session by cookie.
-  public static async function gen(
+  public static function sessionExistGet(
     string $cookie,
     bool $refresh = false,
-  ): Awaitable<Session> {
+  ): Session {
     $mc_result = self::getMCSession($cookie);
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $result = await $db->queryf(
-        'SELECT * FROM sessions WHERE cookie = %s LIMIT 1',
-        $cookie,
+      $db = Db::getInstance();
+      $result = $db->query(
+        'SELECT * FROM sessions WHERE cookie = ? LIMIT 1',
+        [$cookie],
       );
 
-      invariant($result->numRows() === 1, 'Expected exactly one result');
-      $session_data = self::sessionFromRow($result->mapRows()[0]);
+      if (!($result->rowCount() === 1)) {
+        throw new RuntimeException('Expected exactly one result');
+      }
+      $session_data = self::sessionFromRow($result->fetch());
       self::setMCSession($cookie, $session_data);
       return $session_data;
     } else {
-      invariant(
-        $mc_result instanceof Session,
-        'cache return should be of type Session',
-      );
+      if (!($mc_result instanceof Session)) {
+        throw new RuntimeException('cache return should be of type Session');
+      }
       return $mc_result;
     }
   }
 
   // Checks if session exists by cookie.
-  public static async function genSessionExist(
+  public static function sessionExist(
     string $cookie,
     bool $refresh = false,
-  ): Awaitable<bool> {
+  ): bool {
     $mc_result = self::getMCSession($cookie);
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $result = await $db->queryf(
-        'SELECT COUNT(*) FROM sessions WHERE cookie = %s',
-        $cookie,
+      $db = Db::getInstance();
+      $result = $db->query(
+        'SELECT COUNT(*) FROM sessions WHERE cookie = ?',
+        [$cookie],
       );
-      invariant($result->numRows() === 1, 'Expected exactly one result');
-      if (intval(idx($result->mapRows()[0], 'COUNT(*)')) > 0) {
-        await self::genCreateCacheSession($cookie);
+      if (!($result->rowCount() === 1)) {
+        throw new RuntimeException('Expected exactly one result');
+      }
+      if (intval(idx($result->fetch(), 'COUNT(*)')) > 0) {
+        self::createCacheSession($cookie);
         return true;
       }
     }
     return self::getMCSession($cookie) !== false;
   }
 
-  public static async function genSessionDataIfExist(
+  public static function sessionDataIfExist(
     string $cookie,
     bool $refresh = false,
-  ): Awaitable<string> {
+  ): string {
     $mc_result = self::getMCSession($cookie);
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $result = await $db->queryf(
-        'SELECT * FROM sessions WHERE cookie = %s LIMIT 1',
-        $cookie,
+      $db = Db::getInstance();
+      $result = $db->query(
+        'SELECT * FROM sessions WHERE cookie = ? LIMIT 1',
+        [$cookie],
       );
 
-      if ($result->numRows() === 1) {
-        $session = await self::gen($cookie);
+      if ($result->rowCount() === 1) {
+        $session = self::sessionExistGet($cookie);
         return $session->getData();
       } else {
         return '';
@@ -197,10 +195,9 @@ class Session extends Model {
     }
     $session = self::getMCSession($cookie);
     if ($session) {
-      invariant(
-        $session instanceof Session,
-        'session should be of type Session',
-      );
+      if (!($session instanceof Session)) {
+        throw new RuntimeException('session should be of type Session');
+      }
       return $session->getData();
     } else {
       return '';
@@ -208,41 +205,38 @@ class Session extends Model {
   }
 
   // Update the session for a given cookie.
-  public static async function genUpdate(
+  public static function update(
     string $cookie,
     string $data,
     bool $refresh = false,
-  ): Awaitable<void> {
-    await self::genUpdateCacheSession($cookie, $data);
+  ): void {
+    self::updateCacheSession($cookie, $data);
     if (!$refresh &&
         (Router::isRequestModal() ||
          Router::isRequestAjax() ||
          !Router::isRequestRouter())) {
       return;
     }
-    $db = await self::genDb();
-    await $db->queryf(
-      'UPDATE sessions SET last_access_ts = NOW(), data = %s, last_page_access = %s WHERE cookie = %s LIMIT 1',
-      $data,
-      Router::getRequestedPage(),
-      $cookie,
+    $db = Db::getInstance();
+    $db->query(
+      'UPDATE sessions SET last_access_ts = NOW(), data = ?, last_page_access = ? WHERE cookie = ? LIMIT 1',
+      [$data, Router::getRequestedPage(), $cookie],
     );
   }
 
   // Update the cache version of a session for a given cookie.
-  public static async function genUpdateCacheSession(
+  public static function updateCacheSession(
     string $cookie,
     string $data,
-  ): Awaitable<void> {
+  ): void {
     if ($data === '') {
       return;
     }
     $mc_result = self::getMCSession($cookie);
     if ($mc_result) {
-      invariant(
-        $mc_result instanceof Session,
-        'session should be of type Session',
-      );
+      if (!($mc_result instanceof Session)) {
+        throw new RuntimeException('session should be of type Session');
+      }
       $mc_result->last_access_ts = date("Y-m-d H:i:s");
       $mc_result->data = $data;
       $last_page_access = Router::getRequestedPage();
@@ -251,41 +245,41 @@ class Session extends Model {
       }
       self::setMCSession($cookie, $mc_result);
     } else {
-      await self::genCreateCacheSession($cookie);
+      self::createCacheSession($cookie);
     }
   }
 
   // Delete the session for a given cookie.
-  public static async function genDelete(string $cookie): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf(
-      'DELETE FROM sessions WHERE cookie = %s LIMIT 1',
-      $cookie,
+  public static function delete(string $cookie): void {
+    $db = Db::getInstance();
+    $db->query(
+      'DELETE FROM sessions WHERE cookie = ? LIMIT 1',
+      [$cookie],
     );
     self::invalidateMCSessions($cookie);
   }
 
   // Delete the session for a given a team id.
-  public static async function genDeleteByTeam(int $team_id): Awaitable<void> {
-    $db = await self::genDb();
-    $team_sessions = await self::genSessionsByTeam($team_id);
-    await $db->queryf('DELETE FROM sessions WHERE team_id = %d', $team_id);
+  public static function deleteByTeam(int $team_id): void {
+    $db = Db::getInstance();
+    $team_sessions = self::sessionsByTeam($team_id);
+    $db->query('DELETE FROM sessions WHERE team_id = ?', [$team_id]);
     foreach ($team_sessions as $session) {
       self::invalidateMCSessions($session->getCookie());
     }
   }
 
-  public static async function genSessionsByTeam(
+  public static function sessionsByTeam(
     int $team_id,
-  ): Awaitable<array<Session>> {
-    $db = await self::genDb();
-    $result = await $db->queryf(
-      'SELECT * FROM sessions WHERE team_id = %d',
-      $team_id,
+  ): array {
+    $db = Db::getInstance();
+    $result = $db->query(
+      'SELECT * FROM sessions WHERE team_id = ?',
+      [$team_id],
     );
 
-    $sessions = array();
-    foreach ($result->mapRows() as $row) {
+    $sessions = [];
+    foreach ($result->fetchAll() as $row) {
       $sessions[] = self::sessionFromRow($row);
     }
 
@@ -293,10 +287,10 @@ class Session extends Model {
   }
 
   // Delete all sessions for unprotected teams
-  public static async function genDeleteAllUnprotected(): Awaitable<void> {
-    $db = await self::genDb();
-    $team_sessions = await self::genUnprotectedSessions();
-    await $db->queryf(
+  public static function deleteAllUnprotected(): void {
+    $db = Db::getInstance();
+    $team_sessions = self::unprotectedSessions();
+    $db->query(
       'DELETE FROM sessions USING sessions, teams WHERE sessions.team_id = teams.id and teams.protected = 0',
     );
     foreach ($team_sessions as $session) {
@@ -305,33 +299,30 @@ class Session extends Model {
   }
 
   // Does cleanup of cookies.
-  public static async function genCleanup(int $maxlifetime): Awaitable<void> {
+  public static function cleanup(int $maxlifetime): void {
     if (Router::isRequestModal() ||
         Router::isRequestAjax() ||
         !Router::isRequestRouter()) {
       return;
     }
-    $db = await self::genDb();
-    list($expired_sessions, $empty_sessions) = await \HH\Asio\va(
-      self::genExpiredSessionsForCleanup($maxlifetime),
-      self::genEmptySessionsForCleanup(),
-    );
+    $db = Db::getInstance();
+    $expired_sessions = self::expiredSessionsForCleanup($maxlifetime);
+    $empty_sessions = self::emptySessionsForCleanup();
 
     foreach ($expired_sessions as $session) {
       $cached_session = self::getMCSession($session->getCookie());
       if ($cached_session === false) {
         continue;
       }
-      invariant(
-        $cached_session instanceof Session,
-        'cached_session should be of type Session',
-      );
+      if (!($cached_session instanceof Session)) {
+        throw new RuntimeException('cached_session should be of type Session');
+      }
       $cached_timestamp = strtotime($cached_session->last_access_ts);
       if (strtotime($cached_session->last_access_ts) <
           (time() - $maxlifetime)) {
         self::invalidateMCSessions($session->getCookie());
       } else {
-        await self::genUpdate(
+        self::update(
           $session->getCookie(),
           $session->getData(),
           true,
@@ -343,14 +334,13 @@ class Session extends Model {
       if ($cached_session === false) {
         continue;
       }
-      invariant(
-        $cached_session instanceof Session,
-        'cached_session should be of type Session',
-      );
+      if (!($cached_session instanceof Session)) {
+        throw new RuntimeException('cached_session should be of type Session');
+      }
       if ($cached_session->getData() === '') {
         self::invalidateMCSessions($session->getCookie());
       } else if ($cached_session->getData() !== '') {
-        await self::genUpdate(
+        self::update(
           $session->getCookie(),
           $session->getData(),
           true,
@@ -358,60 +348,56 @@ class Session extends Model {
       }
     }
     // Clean up expired and empty sessions
-    $queries = Vector {
+    $queries = [
       sprintf(
         'DELETE FROM sessions WHERE UNIX_TIMESTAMP(last_access_ts) < %d',
         time() - $maxlifetime,
       ),
       'DELETE FROM sessions WHERE data IS NULL',
-    };
-    await $db->multiQuery($queries);
+    ];
+    $db->multiQuery($queries);
   }
 
-  public static async function genUnprotectedSessions(
-  ): Awaitable<array<Session>> {
-    $db = await self::genDb();
-    $sessions = array();
-    $result =
-      await $db->queryf(
-        'SELECT * FROM sessions, teams WHERE sessions.team_id = teams.id AND teams.protected = 0',
-      );
+  public static function unprotectedSessions(): array {
+    $db = Db::getInstance();
+    $sessions = [];
+    $result = $db->query(
+      'SELECT * FROM sessions, teams WHERE sessions.team_id = teams.id AND teams.protected = 0',
+    );
 
-    foreach ($result->mapRows() as $row) {
+    foreach ($result->fetchAll() as $row) {
       $sessions[] = self::sessionFromRow($row);
     }
 
     return $sessions;
   }
 
-  public static async function genExpiredSessionsForCleanup(
+  public static function expiredSessionsForCleanup(
     int $maxlifetime,
-  ): Awaitable<array<Session>> {
-    $db = await self::genDb();
-    $sessions = array();
-    $result = await $db->queryf(
-      'SELECT * FROM sessions WHERE UNIX_TIMESTAMP(last_access_ts) < %d',
-      time() - $maxlifetime,
+  ): array {
+    $db = Db::getInstance();
+    $sessions = [];
+    $result = $db->query(
+      'SELECT * FROM sessions WHERE UNIX_TIMESTAMP(last_access_ts) < ?',
+      [time() - $maxlifetime],
     );
 
-    foreach ($result->mapRows() as $row) {
+    foreach ($result->fetchAll() as $row) {
       $sessions[] = self::sessionFromRow($row);
     }
 
     return $sessions;
   }
 
-  public static async function genEmptySessionsForCleanup(
-  ): Awaitable<array<Session>> {
-    $db = await self::genDb();
-    $sessions = array();
-    $result = await $db->queryf(
-      'SELECT * FROM sessions WHERE IFNULL(data, %s) = %s',
-      '',
-      '',
+  public static function emptySessionsForCleanup(): array {
+    $db = Db::getInstance();
+    $sessions = [];
+    $result = $db->query(
+      'SELECT * FROM sessions WHERE IFNULL(data, ?) = ?',
+      ['', ''],
     );
 
-    foreach ($result->mapRows() as $row) {
+    foreach ($result->fetchAll() as $row) {
       $sessions[] = self::sessionFromRow($row);
     }
 
@@ -419,35 +405,29 @@ class Session extends Model {
   }
 
   // All the sessions
-  public static async function genAllSessions(
+  public static function allSessions(
     bool $refresh = false,
-  ): Awaitable<array<Session>> {
+  ): array {
     if ($refresh) {
-      $db = await self::genDb();
-      $sessions = array();
-      $result = await $db->queryf(
+      $db = Db::getInstance();
+      $sessions = [];
+      $result = $db->query(
         'SELECT * FROM sessions ORDER BY last_access_ts DESC',
       );
 
-      $sessions = array();
-      foreach ($result->mapRows() as $row) {
+      $sessions = [];
+      foreach ($result->fetchAll() as $row) {
         $sessions[] = self::sessionFromRow($row);
       }
       return $sessions;
     } else {
       $mc = self::getMc();
-      $sessions = array();
-      $cached_sessions = array();
-      /* HH_IGNORE_ERROR[4053]: HHVM doesn't beleive there is a getAllKeys() method, there is... */
-      //$mc_keys = $mc->getAllKeys();
-      /* Memcached::getAllKeys() is not working in HHVM 3.21 - For now we will flush Memcache in place of the call.
-       *  Flushing the cache will be slower and will negatively impact performance.
-       *  As soon as getAllKeys() regains support in HHVM, or the functionality it replaced, this should be updated.
-       */
-      $mc_keys = array();
+      $sessions = [];
+      $cached_sessions = [];
+      $mc_keys = [];
       self::flushMCCluster();
       $all_sessions = preg_grep(
-        '/'.self::$MC_KEY.self::$MC_KEYS->get('SESSIONS').'/',
+        '/'.self::$MC_KEY.self::$MC_KEYS['SESSIONS'].'/',
         $mc_keys,
       );
       foreach ($all_sessions as $session_key) {
@@ -461,18 +441,17 @@ class Session extends Model {
           $sessions[] = $session;
         }
       }
-      $db = await self::genDb();
-      $result = await $db->queryf('SELECT * FROM sessions');
+      $db = Db::getInstance();
+      $result = $db->query('SELECT * FROM sessions');
 
-      foreach ($result->mapRows() as $row) {
-        if (!in_array($row->get('cookie'), $cached_sessions)) {
+      foreach ($result->fetchAll() as $row) {
+        if (!in_array($row['cookie'], $cached_sessions)) {
           $sessions[] = self::sessionFromRow($row);
         }
       }
-      invariant(
-        is_array($sessions),
-        '$sessions should be an array of Session',
-      );
+      if (!(is_array($sessions))) {
+        throw new RuntimeException('$sessions should be an array of Session');
+      }
       return $sessions;
     }
   }
@@ -480,7 +459,7 @@ class Session extends Model {
   private static function setMCSession(string $key, mixed $records): void {
     $key = str_replace(' ', '', $key);
     self::writeMCCluster(
-      self::$MC_KEY.self::$MC_KEYS->get('SESSIONS').$key,
+      self::$MC_KEY.self::$MC_KEYS['SESSIONS'].$key,
       $records,
     );
   }
@@ -489,7 +468,7 @@ class Session extends Model {
     $mc = self::getMc();
     $key = str_replace(' ', '', $key);
     $mc_result =
-      $mc->get(static::$MC_KEY.static::$MC_KEYS->get('SESSIONS').$key);
+      $mc->get(static::$MC_KEY.static::$MC_KEYS['SESSIONS'].$key);
     return $mc_result;
   }
 
@@ -497,16 +476,10 @@ class Session extends Model {
     $mc = self::getMc();
     $key = str_replace(' ', '', $key);
     if ($key === null) {
-      /* HH_IGNORE_ERROR[4053]: HHVM doesn't beleive there is a getAllKeys() method, there is... */
-      //$mc_keys = $mc->getAllKeys();
-      /* Memcached::getAllKeys() is not working in HHVM 3.21 - For now we will flush Memcache in place of the call.
-       *  Flushing the cache will be slower and will negatively impact performance.
-       *  As soon as getAllKeys() regains support in HHVM, or the functionality it replaced, this should be updated.
-       */
-      $mc_keys = array();
+      $mc_keys = [];
       self::flushMCCluster();
       $all_sessions = preg_grep(
-        '/'.self::$MC_KEY.self::$MC_KEYS->get('SESSIONS').'/',
+        '/'.self::$MC_KEY.self::$MC_KEYS['SESSIONS'].'/',
         $mc_keys,
       );
       foreach ($all_sessions as $session_key) {
@@ -514,7 +487,7 @@ class Session extends Model {
       }
     } else {
       self::invalidateMCCluster(
-        self::$MC_KEY.self::$MC_KEYS->get('SESSIONS').$key,
+        self::$MC_KEY.self::$MC_KEYS['SESSIONS'].$key,
       );
     }
   }

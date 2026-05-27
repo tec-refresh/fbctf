@@ -1,14 +1,13 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class Category extends Model implements Importable, Exportable {
 
   protected static string $MC_KEY = 'categories:';
 
-  protected static Map<string, string>
-    $MC_KEYS = Map {
-      'ALL_CATEGORIES' => 'categories',
-      'CATEGORIES' => 'categories_id',
-    };
+  protected static array $MC_KEYS = [
+    'ALL_CATEGORIES' => 'categories',
+    'CATEGORIES' => 'categories_id',
+  ];
 
   private function __construct(
     private int $id,
@@ -33,7 +32,7 @@ class Category extends Model implements Importable, Exportable {
     return $this->created_ts;
   }
 
-  private static function categoryFromRow(Map<string, string> $row): Category {
+  private static function categoryFromRow(array $row): Category {
     return new Category(
       intval(must_have_idx($row, 'id')),
       must_have_idx($row, 'category'),
@@ -43,14 +42,14 @@ class Category extends Model implements Importable, Exportable {
   }
 
   // Import levels.
-  public static async function importAll(
-    array<string, array<string, mixed>> $elements,
-  ): Awaitable<bool> {
+  public static function importAll(
+    array $elements,
+  ): bool {
     foreach ($elements as $category) {
       $c = must_have_string($category, 'category');
-      $exist = await self::genCheckExists($c);
+      $exist = self::checkExists($c);
       if (!$exist) {
-        await self::genCreate(
+        self::create(
           $c,
           (bool) must_have_idx($category, 'protected'),
         );
@@ -60,189 +59,183 @@ class Category extends Model implements Importable, Exportable {
   }
 
   // Export levels.
-  public static async function exportAll(
-  ): Awaitable<array<string, array<string, mixed>>> {
-    $all_categories_data = array();
-    $all_categories = await self::genAllCategories();
+  public static function exportAll(): array {
+    $all_categories_data = [];
+    $all_categories = self::allCategories();
 
     foreach ($all_categories as $category) {
-      $one_category = array(
+      $one_category = [
         'category' => $category->getCategory(),
         'protected' => $category->getProtected(),
-      );
+      ];
       array_push($all_categories_data, $one_category);
     }
-    return array('categories' => $all_categories_data);
+    return ['categories' => $all_categories_data];
   }
 
   // All categories.
-  public static async function genAllCategories(
+  public static function allCategories(
     bool $refresh = false,
-  ): Awaitable<array<Category>> {
+  ): array {
     $mc_result = self::getMCRecords('ALL_CATEGORIES');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $categories = array();
-      $result =
-        await $db->queryf('SELECT * FROM categories ORDER BY category ASC');
-      foreach ($result->mapRows() as $row) {
+      $db = Db::getInstance();
+      $categories = [];
+      $result = $db->query('SELECT * FROM categories ORDER BY category ASC');
+      foreach ($result->fetchAll() as $row) {
         $categories[] = self::categoryFromRow($row);
       }
       self::setMCRecords('ALL_CATEGORIES', $categories);
       return $categories;
-      return $categories;
     } else {
-      invariant(
-        is_array($mc_result),
-        'cache return should be an array of Category',
-      );
+      if (!(is_array($mc_result))) {
+        throw new RuntimeException('cache return should be an array of Category');
+      }
       return $mc_result;
     }
   }
 
   // Check if category is used.
-  public static async function genIsUsed(int $category_id): Awaitable<bool> {
-    $db = await self::genDb();
+  public static function isUsed(int $category_id): bool {
+    $db = Db::getInstance();
 
-    $result = await $db->queryf(
-      'SELECT COUNT(*) FROM levels WHERE category_id = %d',
-      $category_id,
+    $result = $db->query(
+      'SELECT COUNT(*) FROM levels WHERE category_id = ?',
+      [$category_id],
     );
 
-    if ($result->numRows() > 0) {
-      invariant($result->numRows() === 1, 'Expected exactly one result');
-      return intval($result->mapRows()[0]['COUNT(*)']) > 0;
+    if ($result->rowCount() > 0) {
+      if (!($result->rowCount() === 1)) {
+        throw new RuntimeException('Expected exactly one result');
+      }
+      return intval($result->fetch()['COUNT(*)']) > 0;
     } else {
       return false;
     }
   }
 
   // Delete category.
-  public static async function genDelete(int $category_id): Awaitable<void> {
-    $db = await self::genDb();
+  public static function delete(int $category_id): void {
+    $db = Db::getInstance();
 
-    await $db->queryf(
-      'DELETE FROM categories WHERE id = %d AND id NOT IN (SELECT category_id FROM levels) AND protected = 0 LIMIT 1',
-      $category_id,
+    $db->query(
+      'DELETE FROM categories WHERE id = ? AND id NOT IN (SELECT category_id FROM levels) AND protected = 0 LIMIT 1',
+      [$category_id],
     );
     self::invalidateMCRecords(); // Invalidate Memcached Category data.
   }
 
   // Create category.
-  public static async function genCreate(
+  public static function create(
     string $category,
     bool $protected,
-  ): Awaitable<int> {
-    $db = await self::genDb();
+  ): int {
+    $db = Db::getInstance();
 
     // Create category
-    await $db->queryf(
-      'INSERT INTO categories (category, protected, created_ts) VALUES (%s, %d, NOW())',
-      $category,
-      (int) $protected,
+    $db->query(
+      'INSERT INTO categories (category, protected, created_ts) VALUES (?, ?, NOW())',
+      [$category, (int) $protected],
     );
 
     // Return newly created category_id
-    $result = await $db->queryf(
-      'SELECT id FROM categories WHERE category = %s LIMIT 1',
-      $category,
+    $result = $db->query(
+      'SELECT id FROM categories WHERE category = ? LIMIT 1',
+      [$category],
     );
 
-    invariant($result->numRows() === 1, 'Expected exactly one result');
+    if (!($result->rowCount() === 1)) {
+      throw new RuntimeException('Expected exactly one result');
+    }
     self::invalidateMCRecords(); // Invalidate Memcached Category data.
-    return intval($result->mapRows()[0]['id']);
+    return intval($result->fetch()['id']);
   }
 
   // Update category.
-  public static async function genUpdate(
+  public static function update(
     string $category,
     int $category_id,
-  ): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf(
-      'UPDATE categories SET category = %s WHERE id = %d LIMIT 1',
-      $category,
-      $category_id,
+  ): void {
+    $db = Db::getInstance();
+    $db->query(
+      'UPDATE categories SET category = ? WHERE id = ? LIMIT 1',
+      [$category, $category_id],
     );
     self::invalidateMCRecords(); // Invalidate Memcached Category data.
   }
 
   // Get category by id.
-  /* HH_IGNORE_ERROR[4110]: Claims - It is incompatible with void because this async function implicitly returns Awaitable<void>, yet this returns Awaitable<Category> and the type is checked on line 188 */
-  public static async function genSingleCategory(
+  public static function singleCategory(
     int $category_id,
     bool $refresh = false,
-  ): Awaitable<Category> {
+  ): Category {
     $mc_result = self::getMCRecords('CATEGORIES');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $categories = Map {};
-      $result = await $db->queryf('SELECT * FROM categories');
-      foreach ($result->mapRows() as $row) {
-        $categories->add(
-          Pair {intval($row->get('id')), self::categoryFromRow($row)},
-        );
+      $db = Db::getInstance();
+      $categories = [];
+      $result = $db->query('SELECT * FROM categories');
+      foreach ($result->fetchAll() as $row) {
+        $categories[intval($row['id'])] = self::categoryFromRow($row);
       }
       self::setMCRecords('CATEGORIES', $categories);
-      invariant(
-        $categories->contains($category_id) !== false,
-        'category not found',
-      );
-      $category = $categories->get($category_id);
-      invariant(
-        $category instanceof Category,
-        'category should be type of Category',
-      );
+      if (!array_key_exists($category_id, $categories)) {
+        throw new RuntimeException('category not found');
+      }
+      $category = $categories[$category_id];
+      if (!($category instanceof Category)) {
+        throw new RuntimeException('category should be type of Category');
+      }
       return $category;
     } else {
-      invariant(
-        $mc_result instanceof Map,
-        'categories should be type of Map',
-      );
-      invariant(
-        $mc_result->contains($category_id) !== false,
-        'category not found',
-      );
-      $category = $mc_result->get($category_id);
-      invariant(
-        $category instanceof Category,
-        'category should be type of Category',
-      );
+      if (!(is_array($mc_result))) {
+        throw new RuntimeException('categories should be type of array');
+      }
+      if (!array_key_exists($category_id, $mc_result)) {
+        throw new RuntimeException('category not found');
+      }
+      $category = $mc_result[$category_id];
+      if (!($category instanceof Category)) {
+        throw new RuntimeException('category should be type of Category');
+      }
       return $category;
     }
   }
 
   // Get category by name.
-  public static async function genSingleCategoryByName(
+  public static function singleCategoryByName(
     string $category,
-  ): Awaitable<Category> {
-    $db = await self::genDb();
+  ): Category {
+    $db = Db::getInstance();
 
-    $result = await $db->queryf(
-      'SELECT * FROM categories WHERE category = %s LIMIT 1',
-      $category,
+    $result = $db->query(
+      'SELECT * FROM categories WHERE category = ? LIMIT 1',
+      [$category],
     );
 
-    invariant($result->numRows() === 1, 'Expected exactly one result');
-    $category = self::categoryFromRow($result->mapRows()[0]);
+    if (!($result->rowCount() === 1)) {
+      throw new RuntimeException('Expected exactly one result');
+    }
+    $category = self::categoryFromRow($result->fetch());
 
     return $category;
   }
 
   // Check if a category is already created.
-  public static async function genCheckExists(
+  public static function checkExists(
     string $category,
-  ): Awaitable<bool> {
-    $db = await self::genDb();
+  ): bool {
+    $db = Db::getInstance();
 
-    $result = await $db->queryf(
-      'SELECT COUNT(*) FROM categories WHERE category = %s',
-      $category,
+    $result = $db->query(
+      'SELECT COUNT(*) FROM categories WHERE category = ?',
+      [$category],
     );
 
-    if ($result->numRows() > 0) {
-      invariant($result->numRows() === 1, 'Expected exactly one result');
-      return (intval(idx($result->mapRows()[0], 'COUNT(*)')) > 0);
+    if ($result->rowCount() > 0) {
+      if (!($result->rowCount() === 1)) {
+        throw new RuntimeException('Expected exactly one result');
+      }
+      return (intval(idx($result->fetch(), 'COUNT(*)')) > 0);
     } else {
       return false;
     }

@@ -1,17 +1,16 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class Configuration extends Model {
 
   protected static string $MC_KEY = 'configuration:';
 
-  protected static Map<string, string>
-    $MC_KEYS = Map {
-      'CONFIGURATION' => 'config_field',
-      'FACEBOOK_INTEGRATION_APP_ID' => 'integration_facebook_app_id',
-      'FACEBOOK_INTEGRATION_APP_SECRET' =>
-        'integration_facebook_app_secret',
-      'GOOGLE_INTEGRATION_FILE' => 'integration_google_file',
-    };
+  protected static array $MC_KEYS = [
+    'CONFIGURATION' => 'config_field',
+    'FACEBOOK_INTEGRATION_APP_ID' => 'integration_facebook_app_id',
+    'FACEBOOK_INTEGRATION_APP_SECRET' =>
+      'integration_facebook_app_secret',
+    'GOOGLE_INTEGRATION_FILE' => 'integration_google_file',
+  ];
 
   private function __construct(
     private int $id,
@@ -37,131 +36,122 @@ class Configuration extends Model {
   }
 
   // Get configuration entry.
-  public static async function gen(
+  public static function get(
     string $field,
     bool $refresh = false,
-  ): Awaitable<Configuration> {
+  ): Configuration {
     $mc_result = self::getMCRecords('CONFIGURATION');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $config_values = Map {};
-      $result = await $db->queryf('SELECT * FROM configuration');
-      foreach ($result->mapRows() as $row) {
-        $config_values->add(
-          Pair {
-            strval($row->get('field')),
-            self::configurationFromRow($row->toArray()),
-          },
-        );
+      $db = Db::getInstance();
+      $config_values = [];
+      $result = $db->query('SELECT * FROM configuration');
+      foreach ($result->fetchAll() as $row) {
+        $config_values[strval($row['field'])] = self::configurationFromRow($row);
       }
       self::setMCRecords('CONFIGURATION', $config_values);
-      invariant(
-        $config_values->contains($field) !== false,
-        'config value not found (db): %s',
-        $field,
-      );
-      $config = $config_values->get($field);
-      invariant(
-        $config instanceof Configuration,
-        'config cache value should of type Configuration and not null',
-      );
+      if (!array_key_exists($field, $config_values)) {
+        throw new RuntimeException(
+          sprintf('config value not found (db): %s', $field),
+        );
+      }
+      $config = $config_values[$field];
+      if (!($config instanceof Configuration)) {
+        throw new RuntimeException('config cache value should of type Configuration and not null');
+      }
       return $config;
     } else {
-      invariant(
-        $mc_result instanceof Map,
-        'config cache return should be of type Map and not null',
-      );
-      invariant(
-        $mc_result->contains($field) !== false,
-        'config value not found (cache): %s',
-        $field,
-      );
-      $config = $mc_result->get($field);
-      invariant(
-        $config instanceof Configuration,
-        'config cache value should of type Configuration and not null',
-      );
+      if (!is_array($mc_result)) {
+        throw new RuntimeException('config cache return should be of type array and not null');
+      }
+      if (!array_key_exists($field, $mc_result)) {
+        throw new RuntimeException(
+          sprintf('config value not found (cache): %s', $field),
+        );
+      }
+      $config = $mc_result[$field];
+      if (!($config instanceof Configuration)) {
+        throw new RuntimeException('config cache value should of type Configuration and not null');
+      }
       return $config;
     }
   }
 
   // Change configuration field.
-  public static async function genUpdate(
+  public static function update(
     string $field,
     string $value,
-  ): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf(
-      'UPDATE configuration SET value = %s WHERE field = %s LIMIT 1',
-      $value,
-      $field,
+  ): void {
+    $db = Db::getInstance();
+    $db->query(
+      'UPDATE configuration SET value = ? WHERE field = ? LIMIT 1',
+      [$value, $field],
     );
     if ($field === 'login' && intval($value) === 0) {
-      await Session::genDeleteAllUnprotected();
+      Session::deleteAllUnprotected();
     }
 
     self::invalidateMCRecords(); // Invalidate Configuration data.
   }
 
   // Check if field is valid.
-  public static async function genValidField(string $field): Awaitable<bool> {
-    $db = await self::genDb();
-    $result = await $db->queryf(
-      'SELECT COUNT(*) FROM configuration WHERE field = %s',
-      $field,
+  public static function validField(string $field): bool {
+    $db = Db::getInstance();
+    $result = $db->query(
+      'SELECT COUNT(*) FROM configuration WHERE field = ?',
+      [$field],
     );
 
-    invariant($result->numRows() === 1, 'Expected exactly one result');
+    if (!($result->rowCount() === 1)) {
+      throw new RuntimeException('Expected exactly one result');
+    }
 
-    return intval(idx(firstx($result->mapRows()), 'COUNT(*)')) > 0;
+    return intval(idx(firstx($result->fetchAll()), 'COUNT(*)')) > 0;
   }
 
   // All the password types.
-  public static async function genAllPasswordTypes(
-  ): Awaitable<array<Configuration>> {
-    $db = await self::genDb();
-    $result = await $db->queryf('SELECT * FROM password_types');
+  public static function allPasswordTypes(): array {
+    $db = Db::getInstance();
+    $result = $db->query('SELECT * FROM password_types');
 
-    $types = array();
-    foreach ($result->mapRows() as $row) {
-      $types[] = self::configurationFromRow($row->toArray());
+    $types = [];
+    foreach ($result->fetchAll() as $row) {
+      $types[] = self::configurationFromRow($row);
     }
 
     return $types;
   }
 
   // Current password type.
-  public static async function genCurrentPasswordType(
-  ): Awaitable<Configuration> {
-    $db = await self::genDb();
-    $db_result =
-      await $db->queryf(
-        'SELECT * FROM password_types WHERE field = (SELECT value FROM configuration WHERE field = %s) LIMIT 1',
-        'password_type',
-      );
+  public static function currentPasswordType(): Configuration {
+    $db = Db::getInstance();
+    $db_result = $db->query(
+      'SELECT * FROM password_types WHERE field = (SELECT value FROM configuration WHERE field = ?) LIMIT 1',
+      ['password_type'],
+    );
 
-    invariant($db_result->numRows() === 1, 'Expected exactly one result');
-    $result = firstx($db_result->mapRows())->toArray();
+    if (!($db_result->rowCount() === 1)) {
+      throw new RuntimeException('Expected exactly one result');
+    }
+    $result = firstx($db_result->fetchAll());
 
     return self::configurationFromRow($result);
   }
 
   // All the configuration.
-  public static async function genAllConfiguration(
-  ): Awaitable<array<Configuration>> {
-    $db = await self::genDb();
-    $result = await $db->queryf('SELECT * FROM configuration');
+  public static function allConfiguration(): array {
+    $db = Db::getInstance();
+    $result = $db->query('SELECT * FROM configuration');
 
-    $configuration = array();
-    foreach ($result->mapRows() as $row) {
-      $configuration[] = self::configurationFromRow($row->toArray());
+    $configuration = [];
+    foreach ($result->fetchAll() as $row) {
+      $configuration[] = self::configurationFromRow($row);
     }
 
     return $configuration;
   }
 
   private static function configurationFromRow(
-    array<string, string> $row,
+    array $row,
   ): Configuration {
     return new Configuration(
       intval(must_have_idx($row, 'id')),

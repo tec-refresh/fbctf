@@ -1,18 +1,17 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class Country extends Model {
 
   protected static string $MC_KEY = 'country:';
 
-  protected static Map<string, string>
-    $MC_KEYS = Map {
-      'ALL_COUNTRIES' => 'all_countries',
-      'ALL_COUNTRIES_BY_ID' => 'all_countries_by_id',
-      'ALL_COUNTRIES_FOR_MAP' => 'all_countries_for_map',
-      'ALL_ENABLED_COUNTRIES' => 'all_enabled_countries',
-      'ALL_ENABLED_COUNTRIES_FOR_MAP' => 'all_enabled_countries_for_map',
-      'ALL_AVAILABLE_COUNTRIES' => 'ALL_AVAILABLE_COUNTRIES',
-    };
+  protected static array $MC_KEYS = [
+    'ALL_COUNTRIES' => 'all_countries',
+    'ALL_COUNTRIES_BY_ID' => 'all_countries_by_id',
+    'ALL_COUNTRIES_FOR_MAP' => 'all_countries_for_map',
+    'ALL_ENABLED_COUNTRIES' => 'all_enabled_countries',
+    'ALL_ENABLED_COUNTRIES_FOR_MAP' => 'all_enabled_countries_for_map',
+    'ALL_AVAILABLE_COUNTRIES' => 'ALL_AVAILABLE_COUNTRIES',
+  ];
 
   private function __construct(
     private int $id,
@@ -53,60 +52,55 @@ class Country extends Model {
   }
 
   // Make sure all the countries used field is good
-  public static async function genUsedAdjust(): Awaitable<void> {
-    $db = await self::genDb();
-    $queries = Vector {
+  public static function usedAdjust(): void {
+    $db = Db::getInstance();
+    $queries = [
       'UPDATE countries SET used = 1 WHERE id IN (SELECT entity_id FROM levels)',
       'UPDATE countries SET used = 0 WHERE id NOT IN (SELECT entity_id FROM levels)',
-    };
-    await $db->multiQuery($queries);
+    ];
+    $db->multiQuery($queries);
     self::invalidateMCRecords();
   }
 
   // Enable or disable a country
-  public static async function genSetStatus(
+  public static function setStatus(
     int $country_id,
     bool $status,
-  ): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf(
-      'UPDATE countries SET enabled = %d WHERE id = %d',
-      $status ? 1 : 0,
-      $country_id,
+  ): void {
+    $db = Db::getInstance();
+    $db->query(
+      'UPDATE countries SET enabled = ? WHERE id = ?',
+      [$status ? 1 : 0, $country_id],
     );
     self::invalidateMCRecords();
   }
 
   // Set the used flag for a country
-  public static async function genSetUsed(
+  public static function setUsed(
     int $country_id,
     bool $status,
-  ): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf(
-      'UPDATE countries SET used = %d WHERE id = %d LIMIT 1',
-      $status ? 1 : 0,
-      $country_id,
+  ): void {
+    $db = Db::getInstance();
+    $db->query(
+      'UPDATE countries SET used = ? WHERE id = ? LIMIT 1',
+      [$status ? 1 : 0, $country_id],
     );
     self::invalidateMCRecords();
   }
 
-  private static async function genAll(
+  private static function all(
     string $sql,
-  ): Awaitable<array<Country>> {
-    $db = await self::genDb();
-    $all_countries = Map {};
-    $db_result = await $db->query($sql);
-    $rows = $db_result->mapRows();
+  ): array {
+    $db = Db::getInstance();
+    $all_countries = [];
+    $db_result = $db->query($sql);
+    $rows = $db_result->fetchAll();
 
     foreach ($rows as $row) {
-      $all_countries->add(
-        Pair {intval($row->get('id')), self::countryFromRow($row)},
-      );
+      $all_countries[intval($row['id'])] = self::countryFromRow($row);
     }
 
-    $countries = array();
-    $countries = $all_countries->toValuesArray();
+    $countries = array_values($all_countries);
 
     usort(
       $countries,
@@ -118,181 +112,172 @@ class Country extends Model {
     return $countries;
   }
 
-  public static async function genAllCountries(
+  public static function allCountries(
     bool $refresh = false,
-  ): Awaitable<array<Country>> {
+  ): array {
     $mc_result = self::getMCRecords('ALL_COUNTRIES');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
       $all_countries =
-        await self::genAll('SELECT * FROM countries ORDER BY iso_code');
+        self::all('SELECT * FROM countries ORDER BY iso_code');
       self::setMCRecords('ALL_COUNTRIES', $all_countries);
       return $all_countries;
     } else {
-      invariant(
-        is_array($mc_result),
-        'cache return should be an array of Country',
-      );
+      if (!(is_array($mc_result))) {
+        throw new RuntimeException('cache return should be an array of Country');
+      }
       return $mc_result;
     }
   }
 
-  public static async function genAllCountriesForMap(
+  public static function allCountriesForMap(
     bool $refresh = false,
-  ): Awaitable<array<Country>> {
+  ): array {
     $mc_result = self::getMCRecords('ALL_COUNTRIES_FOR_MAP');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
       $all_countries =
-        await self::genAll('SELECT * FROM countries ORDER BY CHAR_LENGTH(d)');
+        self::all('SELECT * FROM countries ORDER BY CHAR_LENGTH(d)');
       self::setMCRecords('ALL_COUNTRIES_FOR_MAP', $all_countries);
       return $all_countries;
     } else {
-      invariant(
-        is_array($mc_result),
-        'cache return should be an array of Country',
-      );
+      if (!(is_array($mc_result))) {
+        throw new RuntimeException('cache return should be an array of Country');
+      }
       return $mc_result;
     }
   }
 
-  public static async function genAllEnabledCountries(
+  public static function allEnabledCountries(
     bool $refresh = false,
-  ): Awaitable<array<Country>> {
+  ): array {
     $mc_result = self::getMCRecords('ALL_ENABLED_COUNTRIES');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
       $all_countries =
-        await self::genAll('SELECT * FROM countries WHERE enabled = 1');
+        self::all('SELECT * FROM countries WHERE enabled = 1');
       self::setMCRecords('ALL_ENABLED_COUNTRIES', $all_countries);
       return $all_countries;
     } else {
-      invariant(
-        is_array($mc_result),
-        'cache return should be an array of Country',
-      );
+      if (!(is_array($mc_result))) {
+        throw new RuntimeException('cache return should be an array of Country');
+      }
       return $mc_result;
     }
   }
 
   // All enabled countries. The weird sorting is because SVG lack of z-index
   // and things looking like shit in the map. See issue #20.
-  public static async function genAllEnabledCountriesForMap(
+  public static function allEnabledCountriesForMap(
     bool $refresh = false,
-  ): Awaitable<array<Country>> {
+  ): array {
     $mc_result = self::getMCRecords('ALL_ENABLED_COUNTRIES_FOR_MAP');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $all_countries = await self::genAll(
+      $all_countries = self::all(
         'SELECT * FROM countries WHERE enabled = 1 ORDER BY CHAR_LENGTH(d)',
       );
       self::setMCRecords('ALL_ENABLED_COUNTRIES_FOR_MAP', $all_countries);
       return $all_countries;
     } else {
-      invariant(
-        is_array($mc_result),
-        'cache return should be an array of Country',
-      );
+      if (!(is_array($mc_result))) {
+        throw new RuntimeException('cache return should be an array of Country');
+      }
       return $mc_result;
     }
   }
 
   // All enabled and unused countries
-  public static async function genAllAvailableCountries(
+  public static function allAvailableCountries(
     bool $refresh = false,
-  ): Awaitable<array<Country>> {
+  ): array {
     $mc_result = self::getMCRecords('ALL_AVAILABLE_COUNTRIES');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $all_countries = await self::genAll(
+      $all_countries = self::all(
         'SELECT * FROM countries WHERE enabled = 1 AND used = 0',
       );
       self::setMCRecords('ALL_AVAILABLE_COUNTRIES', $all_countries);
       return $all_countries;
     } else {
-      invariant(
-        is_array($mc_result),
-        'cache return should be an array of Country',
-      );
+      if (!(is_array($mc_result))) {
+        throw new RuntimeException('cache return should be an array of Country');
+      }
       return $mc_result;
     }
   }
 
   // Check if country is in an active level
-  public static async function genIsActiveLevel(
+  public static function isActiveLevel(
     int $country_id,
-  ): Awaitable<bool> {
-    return Level::genWhoUses($country_id) !== null;
+  ): bool {
+    return Level::whoUses($country_id) !== null;
   }
 
   // Get a country by id.
-  public static async function gen(
+  public static function get(
     int $country_id,
     bool $refresh = false,
-  ): Awaitable<Country> {
+  ): Country {
     $mc_result = self::getMCRecords('ALL_COUNTRIES_BY_ID');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $db = await self::genDb();
-      $all_countries = Map {};
-      $result = await $db->queryf('SELECT * FROM countries ORDER BY id');
-      foreach ($result->mapRows() as $row) {
-        $all_countries->add(
-          Pair {intval($row->get('id')), self::countryFromRow($row)},
-        );
+      $db = Db::getInstance();
+      $all_countries = [];
+      $result = $db->query('SELECT * FROM countries ORDER BY id');
+      foreach ($result->fetchAll() as $row) {
+        $all_countries[intval($row['id'])] = self::countryFromRow($row);
       }
       self::setMCRecords('ALL_COUNTRIES_BY_ID', $all_countries);
-      invariant(
-        $all_countries->contains($country_id) !== false,
-        'country not found',
-      );
-      $country = $all_countries->get($country_id);
-      invariant(
-        $country instanceof Country,
-        'country should be of type Country',
-      );
+      if (!array_key_exists($country_id, $all_countries)) {
+        throw new RuntimeException('country not found');
+      }
+      $country = $all_countries[$country_id];
+      if (!($country instanceof Country)) {
+        throw new RuntimeException('country should be of type Country');
+      }
       return $country;
     } else {
-      invariant(
-        $mc_result instanceof Map,
-        'cache return should be a Map of Country by Id',
-      );
-      invariant(
-        $mc_result->contains($country_id) !== false,
-        'country not found',
-      );
-      $country = $mc_result->get($country_id);
-      invariant(
-        $country instanceof Country,
-        'country should be of type Country',
-      );
+      if (!(is_array($mc_result))) {
+        throw new RuntimeException('cache return should be an array of Country by Id');
+      }
+      if (!array_key_exists($country_id, $mc_result)) {
+        throw new RuntimeException('country not found');
+      }
+      $country = $mc_result[$country_id];
+      if (!($country instanceof Country)) {
+        throw new RuntimeException('country should be of type Country');
+      }
       return $country;
     }
   }
 
   // Get a country by iso_code.
-  public static async function genCountry(
+  public static function country(
     string $country,
-  ): Awaitable<Country> {
-    $db = await self::genDb();
-    $result = await $db->queryf(
-      'SELECT * FROM countries WHERE iso_code = %s LIMIT 1',
-      $country,
+  ): Country {
+    $db = Db::getInstance();
+    $result = $db->query(
+      'SELECT * FROM countries WHERE iso_code = ? LIMIT 1',
+      [$country],
     );
 
-    invariant($result->numRows() === 1, 'Expected exactly one result');
-    return self::countryFromRow($result->mapRows()[0]);
+    if (!($result->rowCount() === 1)) {
+      throw new RuntimeException('Expected exactly one result');
+    }
+    return self::countryFromRow($result->fetch());
   }
 
   // Get a random enabled, unused country ID
-  public static async function genRandomAvailableCountryId(): Awaitable<int> {
-    $db = await self::genDb();
+  public static function randomAvailableCountryId(): int {
+    $db = Db::getInstance();
 
-    $result =
-      await $db->queryf(
-        'SELECT id FROM countries WHERE enabled = 1 AND used = 0 ORDER BY RAND() LIMIT 1',
-      );
+    $result = $db->query(
+      'SELECT id FROM countries WHERE enabled = 1 AND used = 0 ORDER BY RAND() LIMIT 1',
+    );
 
-    invariant($result->numRows() === 1, 'Expected exactly one result');
-    return intval(firstx($result->mapRows())['id']);
+    if (!($result->rowCount() === 1)) {
+      throw new RuntimeException('Expected exactly one result');
+    }
+    return intval(firstx($result->fetchAll())['id']);
   }
 
-  private static function countryFromRow(Map<string, string> $row): Country {
-    $config = \HH\Asio\join(Configuration::gen('language'));
+  private static function countryFromRow(array $row): Country {
+    $config = Configuration::get('language');
     $language = $config->getValue();
     $translated_name = locale_get_display_region(
       '-'.must_have_idx($row, 'iso_code'),
@@ -310,38 +295,42 @@ class Country extends Model {
   }
 
   // Check if a country already exists, by iso_code
-  public static async function genCheckExists(
+  public static function checkExists(
     string $country,
-  ): Awaitable<bool> {
-    $db = await self::genDb();
+  ): bool {
+    $db = Db::getInstance();
 
-    $result = await $db->queryf(
-      'SELECT COUNT(*) FROM countries WHERE iso_code = %s',
-      $country,
+    $result = $db->query(
+      'SELECT COUNT(*) FROM countries WHERE iso_code = ?',
+      [$country],
     );
 
-    if ($result->numRows() > 0) {
-      invariant($result->numRows() === 1, 'Expected exactly one result');
-      return (intval(idx($result->mapRows()[0], 'COUNT(*)')) > 0);
+    if ($result->rowCount() > 0) {
+      if (!($result->rowCount() === 1)) {
+        throw new RuntimeException('Expected exactly one result');
+      }
+      return (intval(idx($result->fetch(), 'COUNT(*)')) > 0);
     } else {
       return false;
     }
   }
 
   // Check if a country already exists, by id
-  public static async function genCheckExistsById(
+  public static function checkExistsById(
     int $entity_id,
-  ): Awaitable<bool> {
-    $db = await self::genDb();
+  ): bool {
+    $db = Db::getInstance();
 
-    $result = await $db->queryf(
-      'SELECT COUNT(*) FROM countries WHERE id = %d',
-      $entity_id,
+    $result = $db->query(
+      'SELECT COUNT(*) FROM countries WHERE id = ?',
+      [$entity_id],
     );
 
-    if ($result->numRows() > 0) {
-      invariant($result->numRows() === 1, 'Expected exactly one result');
-      return (intval(idx($result->mapRows()[0], 'COUNT(*)')) > 0);
+    if ($result->rowCount() > 0) {
+      if (!($result->rowCount() === 1)) {
+        throw new RuntimeException('Expected exactly one result');
+      }
+      return (intval(idx($result->fetch(), 'COUNT(*)')) > 0);
     } else {
       return false;
     }
