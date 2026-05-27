@@ -1,18 +1,27 @@
 # FBCTF v2
 
+A modernized fork of Facebook's Capture the Flag platform, fully ported from Hack/HHVM to PHP 8.3 and containerized with Docker Compose.
+
+<div align="center"><img src="screencapture.gif" /></div>
+
 ## What is FBCTF?
 
 The Facebook CTF is a platform to host Jeopardy and "King of the Hill" style Capture the Flag competitions.
 
-<div align="center"><img src="screencapture.gif" /></div>
+* Organize a competition with anywhere from two to several hundred participants
+* Spin up the platform with a single `docker compose up` command
+* Create quiz, flag, and base challenges via the admin panel
+* Teams register, compete on an interactive world map, and track scores in real time
 
-## How do I use FBCTF?
+## Quick Start
 
-* Organize a competition. This can be done with as few as two participants, all the way up to several hundred. The participants can be physically present, active online, or a combination of the two.
-* Follow setup instructions below to spin up platform infrastructure.
-* Enter challenges into admin page
-* Have participants register as teams
-* Enjoy!
+```bash
+git clone https://github.com/tec-refresh/fbctf.git
+cd fbctf
+docker compose up -d
+```
+
+The platform will be available at `http://localhost`. Default admin login: **admin** / **password**.
 
 ## Stack
 
@@ -26,16 +35,6 @@ The Facebook CTF is a platform to host Jeopardy and "King of the Hill" style Cap
 | Grunt | 1.6+ |
 
 **Architecture:** Multi-arch (ARM64 + x86_64). Runs on Apple Silicon, AWS Graviton, and standard x86 hardware.
-
-## Quick Start (Docker Compose)
-
-```bash
-git clone https://github.com/tec-refresh/fbctf.git
-cd fbctf
-docker compose up -d
-```
-
-The platform will be available at `https://localhost`. Default admin credentials: `admin` / `password`.
 
 ## Installation Options
 
@@ -76,20 +75,67 @@ npm install
 grunt
 ```
 
-## Changes from Original (v1)
+## What Changed in v2
 
-This is a modernized fork of the [original Facebook CTF platform](https://github.com/facebookarchive/fbctf).
+This is a modernized fork of the [original Facebook CTF platform](https://github.com/facebookarchive/fbctf), which was archived and only ran on Ubuntu 16.04 with HHVM. The v2 branch is a complete modernization that makes the platform run on any current OS.
 
-Key changes in v2:
-- **PHP 8.3** replaces HHVM/Hack (all 107 source files ported from Hack to PHP)
-- **PDO** replaces AsyncMysqlConnectionPool
-- **Plain PHP HTML** replaces XHP templates
-- **Docker Compose v2** with official multi-arch images
-- **MySQL 8.0** with utf8mb4 charset
-- **Node.js 20 LTS** with Dart Sass (replaces node-sass)
-- **TLS 1.2/1.3** only (TLS 1.0/1.1 dropped)
-- **ARM64 support** (Apple Silicon, AWS Graviton)
-- Runs on any current Linux/macOS — no longer tied to Ubuntu 16.04
+### Language & Runtime
+
+- **Hack to PHP 8.3** — All 107 source files were ported from Facebook's Hack language (`<?hh // strict`) to standard PHP 8 (`<?php declare(strict_types=1)`)
+- **HHVM removed** — Replaced with PHP-FPM 8.3. All HHVM-specific APIs replaced with PHP equivalents
+- **Async to synchronous** — Hack's `async`/`Awaitable` patterns (609 occurrences) converted to synchronous PHP calls
+- **XHP to HTML** — Facebook's XHP templating DSL replaced with plain PHP HTML string output across all controllers and views
+
+### Database
+
+- **AsyncMysqlConnectionPool to PDO** — HHVM's async MySQL driver replaced with PDO prepared statements
+- **MySQL 5.5 to 8.0** — Schema updated for MySQL 8.0 strict mode (timestamp defaults, utf8mb4 charset)
+- **Parameterized queries** — All `queryf()` calls with `%s`/`%d` placeholders converted to `?` parameter binding
+
+### Infrastructure
+
+- **Docker Compose v2** — Multi-container setup with official images (php:8.3-fpm, nginx:stable, mysql:8.0, memcached:1.6)
+- **Multi-arch** — All Docker images support ARM64 and x86_64 (Apple Silicon, AWS Graviton, standard x86)
+- **Frontend build** — Multi-stage Docker builds compile SCSS and JavaScript (Dart Sass replaces node-sass, Babel 7 replaces Babel 6)
+- **No Ubuntu 16.04 dependency** — Runs on any OS with Docker, or bare metal on Ubuntu 22.04+
+
+### Frontend
+
+- **jQuery 2 to 3** — Updated jQuery with `.error()` to `.fail()` migration for removed APIs
+- **Node.js 10 to 20 LTS** — Updated build toolchain
+- **node-sass to Dart Sass** — Native binary dependency replaced with pure JS implementation (fixes ARM64 builds)
+- **Babel 6 to 7** — `@babel/core`, `@babel/preset-react`, Flow type stripping
+
+### PHP 8 Compatibility Fixes
+
+- Strict type enforcement (`declare(strict_types=1)` on all files)
+- `count()` guards for non-Countable values from Memcached
+- `htmlspecialchars()` string casts for int arguments
+- `date()`/`gmdate()` int casts for string timestamps
+- Invalid regex character class fixes (`[\w-]` to `[\w\-]`)
+- `FILTER_SANITIZE_STRING` replaced with `FILTER_UNSAFE_RAW`
+- Session handler methods made static
+
+### Removed / Simplified
+
+- **LiveSync UI** — Removed from admin and gameboard (backend API retained)
+- **HHVM config** — `.hhconfig`, `hhvm.conf`, HHVM Dockerfiles removed
+- **Travis CI** — Removed (was HHVM-specific)
+- **XHP components** — Custom XHP classes (`Fbbranding`, `Custombranding`, `EmblemCarousel`, `Svg`) removed
+- **Python 2 dependencies** — Removed from provisioning scripts
+
+### End-to-End Verified
+
+The full game loop has been tested:
+
+1. Admin login and configuration
+2. Team creation with emblem selection
+3. Quiz/flag/base level creation and activation
+4. Game start with scoring enabled
+5. Player registration and login
+6. Answering challenges (wrong answer rejected, correct answer scores points)
+7. Leaderboard and scoreboard with progressive chart
+8. Admin team management, sessions, and database reset
 
 ## Reporting an Issue
 
@@ -97,4 +143,4 @@ First, ensure the issue was not already reported by doing a search. If you canno
 
 ## License
 
-This source code is licensed under the Creative Commons Attribution-NonCommercial 4.0 International license. View the license [here](https://github.com/tec-refresh/fbctf/blob/master/LICENSE).
+This source code is licensed under the Creative Commons Attribution-NonCommercial 4.0 International license. View the license [here](https://github.com/tec-refresh/fbctf/blob/v2/LICENSE).
