@@ -1,7 +1,12 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class RedirectException extends Exception {
-  public function __construct(private string $path, private int $statusCode) {
+  private string $path;
+  private int $statusCode;
+
+  public function __construct(string $path, int $statusCode) {
+    $this->path = $path;
+    $this->statusCode = $statusCode;
     parent::__construct();
   }
 
