@@ -1,4 +1,4 @@
-<?hh // strict
+<?php
 
 /* HH_IGNORE_ERROR[1002] */
 $translations = array(
