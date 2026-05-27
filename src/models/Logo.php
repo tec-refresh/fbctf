@@ -121,6 +121,9 @@ class Logo extends Model implements Importable, Exportable {
   ): Logo {
     $all_logos = self::allLogos();
     if (!array_key_exists($name, $all_logos)) {
+      if (array_key_exists('admin', $all_logos)) {
+        return $all_logos['admin'];
+      }
       throw new RuntimeException('logo not found');
     }
     $logo = $all_logos[$name];
