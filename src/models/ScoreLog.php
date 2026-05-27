@@ -281,7 +281,7 @@ class ScoreLog extends Model {
         [$level_id, $team_id, $points, $type, $level_id, $team_id],
       );
 
-    $captured = $result->numRowsAffected() > 0 ? true : false;
+    $captured = $result->rowCount() > 0 ? true : false;
 
     if ($captured === true) {
       ActivityLog::captureLog($team_id, $level_id);

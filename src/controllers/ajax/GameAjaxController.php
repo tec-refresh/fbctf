@@ -12,11 +12,11 @@ class GameAjaxController extends AjaxController {
         'team_name' => FILTER_UNSAFE_RAW,
         'action' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => ['regexp' => '/^[\w-]+$/'],
+          'options' => ['regexp' => '/^[\w\-]+$/'],
         ],
         'page' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => ['regexp' => '/^[\w-]+$/'],
+          'options' => ['regexp' => '/^[\w\-]+$/'],
         ],
       ],
     ];

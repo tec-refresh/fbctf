@@ -21,7 +21,7 @@ class IndexAjaxController extends AjaxController {
         'emails' => FILTER_UNSAFE_RAW,
         'action' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => ['regexp' => '/^[\w-]+$/'],
+          'options' => ['regexp' => '/^[\w\-]+$/'],
         ],
       ],
     ];

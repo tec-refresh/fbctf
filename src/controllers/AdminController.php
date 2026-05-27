@@ -10,7 +10,7 @@ class AdminController extends Controller {
       'GET' => [
         'page' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => ['regexp' => '/^[\w-]+$/'],
+          'options' => ['regexp' => '/^[\w\-]+$/'],
         ],
       ],
     ];

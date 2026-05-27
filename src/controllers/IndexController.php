@@ -10,11 +10,11 @@ class IndexController extends Controller {
       'GET' => [
         'page' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => ['regexp' => '/^[\w-]+$/'],
+          'options' => ['regexp' => '/^[\w\-]+$/'],
         ],
         'action' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => ['regexp' => '/^[\w-]+$/'],
+          'options' => ['regexp' => '/^[\w\-]+$/'],
         ],
       ],
     ];

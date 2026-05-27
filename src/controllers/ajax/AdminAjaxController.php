@@ -26,7 +26,7 @@ class AdminAjaxController extends AjaxController {
         'logo_id' => FILTER_VALIDATE_INT,
         'logo' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => ['regexp' => '/^[\w-.]+$/'],
+          'options' => ['regexp' => '/^[\w\-.]+$/'],
         ],
         'logo_b64' => [
           'filter' => FILTER_VALIDATE_REGEXP,
@@ -67,17 +67,17 @@ class AdminAjaxController extends AjaxController {
         'csrf_token' => FILTER_UNSAFE_RAW,
         'action' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => ['regexp' => '/^[\w-]+$/'],
+          'options' => ['regexp' => '/^[\w\-]+$/'],
         ],
         'page' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => ['regexp' => '/^[\w-]+$/'],
+          'options' => ['regexp' => '/^[\w\-]+$/'],
         ],
       ],
       'GET' => [
         'action' => [
           'filter' => FILTER_VALIDATE_REGEXP,
-          'options' => ['regexp' => '/^[\w-]+$/'],
+          'options' => ['regexp' => '/^[\w\-]+$/'],
         ],
         'csrf_token' => FILTER_UNSAFE_RAW,
       ],

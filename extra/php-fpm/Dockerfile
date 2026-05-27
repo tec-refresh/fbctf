@@ -23,6 +23,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-install pdo_mysql ldap intl \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+RUN echo 'display_errors = Off' > /usr/local/etc/php/conf.d/errors.ini \
+    && echo 'log_errors = On' >> /usr/local/etc/php/conf.d/errors.ini \
+    && echo 'error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT' >> /usr/local/etc/php/conf.d/errors.ini
+
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/fbctf
