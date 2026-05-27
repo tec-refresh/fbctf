@@ -1,56 +1,64 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
-/* HH_IGNORE_ERROR[2001] */
-/* HH_IGNORE_ERROR[2035] */
-const MUST_MODIFY = /* UNSAFE_EXPR */ "<<must-modify:\xEE\xFF\xFF>";
+/**
+ * Hack stdlib compatibility: idx() returns the value at $idx in $arr,
+ * or $default if the key is missing or $arr is null.
+ */
+function idx(?array $arr, string|int $idx, mixed $default = null): mixed {
+  if ($arr === null) {
+    return $default;
+  }
+  return array_key_exists($idx, $arr) ? $arr[$idx] : $default;
+}
 
-function must_have_idx<Tk, Tv>(?KeyedContainer<Tk, Tv> $arr, Tk $idx): Tv {
-  invariant($arr !== null, 'Container is null');
+function must_have_idx(?array $arr, string|int $idx): mixed {
+  if ($arr === null) {
+    throw new \RuntimeException('Container is null');
+  }
   $result = idx($arr, $idx);
-  invariant($result !== null, 'Index %s not found in container', $idx);
+  if ($result === null) {
+    throw new \RuntimeException(sprintf('Index %s not found in container', (string) $idx));
+  }
   return $result;
 }
 
-function must_have_string<Tk as string, Tv>(
-  ?KeyedContainer<Tk, Tv> $arr,
-  Tk $idx,
-): string {
+function must_have_string(?array $arr, string $idx): string {
   $result = must_have_idx($arr, $idx);
-  invariant(is_string($result), 'Expected %s to be a string', strval($idx));
+  if (!is_string($result)) {
+    throw new \RuntimeException(sprintf('Expected %s to be a string', $idx));
+  }
   return $result;
 }
 
-function must_have_int<Tk as string, Tv>(
-  ?KeyedContainer<Tk, Tv> $arr,
-  Tk $idx,
-): int {
+function must_have_int(?array $arr, string $idx): int {
   $result = must_have_idx($arr, $idx);
-  invariant(is_int($result), 'Expected %s to be an int', strval($idx));
+  if (!is_int($result)) {
+    throw new \RuntimeException(sprintf('Expected %s to be an int', $idx));
+  }
   return $result;
 }
 
-function must_have_bool<Tk as string, Tv>(
-  ?KeyedContainer<Tk, Tv> $arr,
-  Tk $idx,
-): bool {
+function must_have_bool(?array $arr, string $idx): bool {
   $result = must_have_idx($arr, $idx);
-  invariant(is_bool($result), 'Expected %s to be a bool', strval($idx));
+  if (!is_bool($result)) {
+    throw new \RuntimeException(sprintf('Expected %s to be a bool', $idx));
+  }
   return $result;
 }
 
-function firstx<T>(Traversable<T> $t): T {
+function firstx(iterable $t): mixed {
   foreach ($t as $v) {
     return $v;
   }
-  invariant_violation('Expected non-empty collection');
+  throw new \RuntimeException('Expected non-empty collection');
 }
 
 function starts_with(string $haystack, string $needle): bool {
-  return substr($haystack, 0, strlen($needle)) === $needle;
+  return str_starts_with($haystack, $needle);
 }
 
 function ends_with(string $haystack, string $needle): bool {
-  return substr($haystack, -strlen($needle)) === $needle;
+  return str_ends_with($haystack, $needle);
 }
 
 function time_ago(string $ts): string {
@@ -61,23 +69,23 @@ function time_ago(string $ts): string {
     return tr('just now');
   }
 
-  $w = array(
+  $w = [
     24 * 60 * 60 => tr('d'),
     60 * 60 => tr('hr'),
     60 => tr('min'),
     1 => tr('sec'),
-  );
-  $w_s = array(
+  ];
+  $w_s = [
     tr('d') => tr('ds'),
     tr('hr') => tr('hrs'),
     tr('min') => tr('mins'),
     tr('sec') => tr('secs'),
-  );
+  ];
   foreach ($w as $secs => $str) {
     $d = $elapsed / $secs;
     if ($d >= 1) {
       $r = round($d);
-      return $r.' '.($r > 1 ? $w_s[$str] : $str).' '.tr('ago');
+      return $r . ' ' . ($r > 1 ? $w_s[$str] : $str) . ' ' . tr('ago');
     }
   }
   return '';
@@ -88,28 +96,24 @@ class Utils {
 
   private function __clone(): void {}
 
-  public static function getGET(): Map<string, mixed> {
-    /* HH_IGNORE_ERROR[2050] */
-    return new Map($_GET);
+  public static function getGET(): array {
+    return $_GET;
   }
 
-  public static function getPOST(): Map<string, mixed> {
-    /* HH_IGNORE_ERROR[2050] */
-    return new Map($_POST);
+  public static function getPOST(): array {
+    return $_POST;
   }
 
-  public static function getSERVER(): Map<string, mixed> {
-    /* HH_IGNORE_ERROR[2050] */
-    return new Map($_SERVER);
+  public static function getSERVER(): array {
+    return $_SERVER;
   }
 
-  public static function getFILES(): Map<string, array<string, mixed>> {
-    /* HH_IGNORE_ERROR[2050] */
-    return new Map($_FILES);
+  public static function getFILES(): array {
+    return $_FILES;
   }
 
   public static function redirect(string $location): void {
-    header('Location: '.$location);
+    header('Location: ' . $location);
   }
 
   public static function request_response(
@@ -117,16 +121,16 @@ class Utils {
     string $msg,
     string $redirect,
   ): string {
-    $response_data = array(
+    $response_data = [
       'result' => $result,
       'message' => $msg,
       'redirect' => $redirect,
-    );
+    ];
     return json_encode($response_data);
   }
 
   public static function hint_response(string $msg, string $result): string {
-    $response_data = array('hint' => $msg, 'result' => $result);
+    $response_data = ['hint' => $msg, 'result' => $result];
     return json_encode($response_data);
   }
 
