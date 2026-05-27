@@ -1,78 +1,61 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 abstract class Controller {
   abstract protected function getTitle(): string;
-  abstract protected function getFilters(): array<string, mixed>;
-  abstract protected function getPages(): array<string>;
+  abstract protected function getFilters(): array;
+  abstract protected function getPages(): array;
 
-  abstract protected function genRenderBody(string $page): Awaitable<:xhp>;
+  abstract protected function renderBody(string $page): string;
 
-  public async function genRenderBranding(): Awaitable<:xhp> {
-    list($custom_branding, $custom_byline, $custom_logo_image) =
-      await \HH\Asio\va(
-        Configuration::gen('custom_logo'),
-        Configuration::gen('custom_byline'),
-        Configuration::gen('custom_logo_image'),
-      );
+  public function renderBranding(): string {
+    $custom_branding = Configuration::get('custom_logo');
+    $custom_byline = Configuration::get('custom_byline');
+    $custom_logo_image = Configuration::get('custom_logo_image');
 
     if ($custom_branding->getValue() === '0') {
-      $branding_xhp =
-        <fbbranding brandingText={tr(strval($custom_byline->getValue()))} />;
+      $text = htmlspecialchars(tr((string)$custom_byline->getValue()));
+      return '<div class="branding"><span class="branding-text">' . $text . '</span></div>';
     } else {
-      $branding_xhp =
-        <custombranding
-          brandingText={strval($custom_byline->getValue())}
-          brandingLogo={strval($custom_logo_image->getValue())}
-        />;
+      $text = htmlspecialchars((string)$custom_byline->getValue());
+      $logo = htmlspecialchars((string)$custom_logo_image->getValue());
+      return '<div class="branding custom-branding">' .
+        '<img src="' . $logo . '" alt="Logo" />' .
+        '<span class="branding-text">' . $text . '</span></div>';
     }
-    return $branding_xhp;
   }
 
-  public async function genRender(): Awaitable<:xhp> {
+  public function render(): string {
     $page = $this->processRequest();
-    list($body, $config) = await \HH\Asio\va(
-      $this->genRenderBody($page),
-      Configuration::gen('language'),
-    );
+    $body = $this->renderBody($page);
+    $config = Configuration::get('language');
     $language = $config->getValue();
     if (!preg_match('/^\w{2}$/', $language)) {
       $language = 'en';
     }
-    // TODO: Potential LFI - Review how to do internationalization better
     $document_root = must_have_string(Utils::getSERVER(), 'DOCUMENT_ROOT');
     $language_style = '';
-    if (file_exists(
-          $document_root.'/static/css/locals/'.$language.'/style.css',
-        )) {
-      $language_style = 'static/css/locals/'.$language.'/style.css';
+    if (file_exists($document_root . '/static/css/locals/' . $language . '/style.css')) {
+      $language_style = '<link rel="stylesheet" href="static/css/locals/' . htmlspecialchars($language) . '/style.css" />';
     }
-    return
-      <x:doctype>
-        <html lang={$language}>
-          <head>
-            <meta http-equiv="Cache-control" content="no-cache" />
-            <meta http-equiv="Expires" content="-1" />
-            <meta charset="UTF-8" />
-            <meta
-              name="viewport"
-              content="width=device-width, initial-scale=1"
-            />
-            <title>{$this->getTitle()}</title>
-            <link
-              rel="icon"
-              type="image/png"
-              href="static/img/favicon.png"
-            />
-            <link rel="stylesheet" href="static/css/fb-ctf.css" />
-            <link rel="stylesheet" href={$language_style} />
-          </head>
-          {$body}
-        </html>
-      </x:doctype>;
+    $title = htmlspecialchars($this->getTitle());
+    return '<!DOCTYPE html>' .
+      '<html lang="' . htmlspecialchars($language) . '">' .
+      '<head>' .
+      '<meta http-equiv="Cache-control" content="no-cache" />' .
+      '<meta http-equiv="Expires" content="-1" />' .
+      '<meta charset="UTF-8" />' .
+      '<meta name="viewport" content="width=device-width, initial-scale=1" />' .
+      '<title>' . $title . '</title>' .
+      '<link rel="icon" type="image/png" href="static/img/favicon.png" />' .
+      '<link rel="stylesheet" href="static/css/fb-ctf.css" />' .
+      $language_style .
+      '</head>' .
+      $body .
+      '</html>';
   }
 
   private function processRequest(): string {
-    $input_methods = array('POST' => INPUT_POST, 'GET' => INPUT_GET);
+    $input_methods = ['POST' => INPUT_POST, 'GET' => INPUT_GET];
     $method = must_have_string(Utils::getSERVER(), 'REQUEST_METHOD');
 
     $filter = idx($this->getFilters(), $method);

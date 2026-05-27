@@ -1,27 +1,27 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 abstract class AjaxController {
-  abstract protected function getFilters(): array<string, mixed>;
-  abstract protected function getActions(): array<string>;
+  abstract protected function getFilters(): array;
+  abstract protected function getActions(): array;
 
-  abstract protected function genHandleAction(
+  abstract protected function handleAction(
     string $action,
-    array<string, mixed> $params,
-  ): Awaitable<string>;
+    array $params,
+  ): string;
 
-  public async function genHandleRequest(): Awaitable<string> {
-    list($action, $params) = $this->processRequest();
-    return await $this->genHandleAction($action, $params);
+  public function handleRequest(): string {
+    [$action, $params] = $this->processRequest();
+    return $this->handleAction($action, $params);
   }
 
-  private function processRequest(): (string, array<string, mixed>) {
-    $input_methods = array('POST' => INPUT_POST, 'GET' => INPUT_GET);
+  private function processRequest(): array {
+    $input_methods = ['POST' => INPUT_POST, 'GET' => INPUT_GET];
     $method = must_have_string(Utils::getSERVER(), 'REQUEST_METHOD');
 
     $filter = idx($this->getFilters(), $method);
     if ($filter === null) {
       // Method not supported
-      return tuple('none', array());
+      return ['none', []];
     }
 
     $input_method = must_have_idx($input_methods, $method);
@@ -32,6 +32,6 @@ abstract class AjaxController {
       $page = 'none';
     }
 
-    return tuple($action, $parameters);
+    return [$action, $parameters];
   }
 }
