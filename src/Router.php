@@ -1,87 +1,85 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class Router {
-  public static async function genRoute(): Awaitable<string> {
-    await tr_start();
+  public static function route(): string {
+    tr_start();
     $page = idx(Utils::getGET(), 'p');
     if (!is_string($page)) {
       $page = 'index';
     }
-    $ajax = Utils::getGET()->get('ajax') === 'true';
-    $modal = Utils::getGET()->get('modal');
+    $ajax = (Utils::getGET()['ajax'] ?? null) === 'true';
+    $modal = Utils::getGET()['modal'] ?? null;
 
     if ($ajax) {
-      return await self::genRouteAjax($page);
+      return self::routeAjax($page);
     } else if ($modal !== null) {
-      $xhp = await self::genRouteModal($page, strval($modal));
-      return strval($xhp);
+      return self::routeModal($page, strval($modal));
     } else {
-      await Control::genRunAutoRunScript();
-      $response = await self::genRouteNormal($page);
-      return strval($response);
+      Control::runAutoRunScript();
+      return self::routeNormal($page);
     }
   }
 
-  private static async function genRouteModal(
+  private static function routeModal(
     string $page,
     string $modal,
-  ): Awaitable<:xhp> {
+  ): string {
     SessionUtils::sessionStart();
     switch ($page) {
       case 'action':
-        return await (new ActionModalController())->genRender($modal);
+        return (new ActionModalController())->render($modal);
       case 'tutorial':
-        return await (new TutorialModalController())->genRender($modal);
+        return (new TutorialModalController())->render($modal);
       case 'country':
-        return await (new CountryModalController())->genRender($modal);
+        return (new CountryModalController())->render($modal);
       case 'scoreboard':
-        return await (new ScoreboardModalController())->genRender($modal);
+        return (new ScoreboardModalController())->render($modal);
       case 'team':
-        return await (new TeamModalController())->genRender($modal);
+        return (new TeamModalController())->render($modal);
       case 'command-line':
-        return await (new CommandLineModalController())->genRender($modal);
+        return (new CommandLineModalController())->render($modal);
       case 'choose-logo':
-        return await (new ChooseLogoModalController())->genRender($modal);
+        return (new ChooseLogoModalController())->render($modal);
       default:
         throw new NotFoundRedirectException();
     }
   }
 
-  private static async function genRouteAjax(string $page): Awaitable<string> {
+  private static function routeAjax(string $page): string {
     SessionUtils::sessionStart();
     switch ($page) {
       case 'index':
-        return await (new IndexAjaxController())->genHandleRequest();
+        return (new IndexAjaxController())->handleRequest();
       case 'admin':
         SessionUtils::enforceLogin();
         SessionUtils::enforceAdmin();
-        return await (new AdminAjaxController())->genHandleRequest();
+        return (new AdminAjaxController())->handleRequest();
       case 'game':
         SessionUtils::enforceLogin();
-        return await (new GameAjaxController())->genHandleRequest();
+        return (new GameAjaxController())->handleRequest();
       default:
         throw new NotFoundRedirectException();
     }
   }
 
-  private static async function genRouteNormal(string $page): Awaitable<:xhp> {
+  private static function routeNormal(string $page): string {
     SessionUtils::sessionStart();
     switch ($page) {
       case 'admin':
         SessionUtils::enforceLogin();
         SessionUtils::enforceAdmin();
-        return await (new AdminController())->genRender();
+        return (new AdminController())->render();
       case 'index':
-        return await (new IndexController())->genRender();
+        return (new IndexController())->render();
       case 'game':
         SessionUtils::enforceLogin();
-        return await (new GameboardController())->genRender();
+        return (new GameboardController())->render();
       case 'view':
-        return await (new ViewModeController())->genRender();
+        return (new ViewModeController())->render();
       case 'logout':
         // TODO: Make a confirmation modal?
         SessionUtils::sessionLogout();
-        invariant(false, 'should not reach here');
+        throw new RuntimeException('should not reach here');
       default:
         throw new NotFoundRedirectException();
     }
@@ -97,11 +95,11 @@ class Router {
   }
 
   public static function isRequestAjax(): bool {
-    return Utils::getGET()->get('ajax') === 'true';
+    return (Utils::getGET()['ajax'] ?? null) === 'true';
   }
 
   public static function isRequestModal(): bool {
-    return Utils::getGET()->get('modal') !== null;
+    return (Utils::getGET()['modal'] ?? null) !== null;
   }
 
   // Check to see if the request is going through the router
