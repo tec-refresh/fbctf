@@ -140,7 +140,7 @@ class Progressive extends Model {
   public static function run(): void {
     $document_root = must_have_string(Utils::getSERVER(), 'DOCUMENT_ROOT');
     $cmd =
-      'hhvm -vRepo.Central.Path=/var/run/hhvm/.hhvm.hhbc_progressive '.
+      'php '.
       $document_root.
       '/scripts/progressive.php > /dev/null 2>&1 & echo $!';
     $pid = shell_exec($cmd);

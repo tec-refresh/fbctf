@@ -231,7 +231,7 @@ class Control extends Model {
         '/scripts/autorun.php',
       );
       $cmd =
-        'hhvm -vRepo.Central.Path=/var/run/hhvm/.hhvm.hhbc_autorun '.
+        'php '.
         $autorun_location.
         ' > /dev/null 2>&1 & echo $!';
       $pid = shell_exec($cmd);
