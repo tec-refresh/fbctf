@@ -1,4 +1,4 @@
-<?hh
+<?php declare(strict_types=1);
 
 if (php_sapi_name() !== 'cli') {
   http_response_code(405); // method not allowed
@@ -11,7 +11,7 @@ require_once (__DIR__.'/../models/Cache.php');
 require_once (__DIR__.'/../models/Configuration.php');
 require_once (__DIR__.'/../models/Progressive.php');
 
-while (\HH\Asio\join(Progressive::genGameStatus())) {
-  \HH\Asio\join(Progressive::genTake());
-  sleep(\HH\Asio\join(Progressive::genCycle()));
+while (Progressive::gameStatus()) {
+  Progressive::take();
+  sleep(Progressive::cycle());
 }

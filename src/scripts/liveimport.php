@@ -1,4 +1,4 @@
-<?hh
+<?php declare(strict_types=1);
 
 if (php_sapi_name() !== 'cli') {
   http_response_code(405); // method not allowed
@@ -26,13 +26,13 @@ require_once
   (__DIR__.'/../../vendor/facebook/graph-sdk/src/Facebook/autoload.php')
 ;
 
-$long_opts = array('url:', 'sleep:', 'disable-ssl-verification', 'debug');
+$long_opts = ['url:', 'sleep:', 'disable-ssl-verification', 'debug'];
 $options = getopt('', $long_opts);
 
 if (array_key_exists('url', $options) === false) {
   print
     "Usage:\n".
-    "  hhvm -vRepo.Central.Path=/var/run/hhvm/.hhvm.hhbc_liveimport ".
+    "  php ".
     $argv[0].
     " \n".
     "    --url <Sync URL> [Switched allowed multiple times.  Optionally provide custom HTTP headers after URL, pipe delimited] \n".
@@ -44,7 +44,7 @@ if (array_key_exists('url', $options) === false) {
 }
 
 if (is_array($options['url']) === false) {
-  $urls = array($options['url']);
+  $urls = [$options['url']];
 } else {
   $urls = $options['url'];
 }
@@ -56,13 +56,13 @@ $check_certificates =
 $debug = (array_key_exists('debug', $options)) ? true : false;
 
 class LiveSyncImport {
-  public static async function genProcess(
+  public static function process(
     array $urls,
     bool $check_certificates,
     bool $debug,
-  ): Awaitable<void> {
+  ): void {
     foreach ($urls as $url) {
-      $json = await self::genDownloadData($url, $check_certificates);
+      $json = self::downloadData($url, $check_certificates);
       $data = json_decode($json);
       if (empty($data) === false) {
         if ((!is_array($data)) && (property_exists($data, 'error'))) {
@@ -70,22 +70,22 @@ class LiveSyncImport {
           continue;
         }
         foreach ($data as $level) {
-          $mandatories_set = await self::genMandatoriesSet($level); // TODO: Combine Awaits
+          $mandatories_set = self::mandatoriesSet($level);
           if ($mandatories_set === false) {
             self::debug(true, $url, '!!!', 'Mandatory Values Not Set');
             continue;
           }
-          $level = await self::genDefaults($level); // TODO: Combine Awaits
-          $level_id = await self::genLevel($url, $level, $debug); // TODO: Combine Awaits
+          $level = self::defaults($level);
+          $level_id = self::level($url, $level, $debug);
           $teams =
-            await self::genTeamCaptures($url, $level, $level_id, $debug); // TODO: Combine Awaits
-          await self::genRecalculateScores(
+            self::teamCaptures($url, $level, $level_id, $debug);
+          self::recalculateScores(
             $url,
             $level,
             $level_id,
             $teams,
             $debug,
-          ); // TODO: Combine Awaits
+          );
         }
       } else {
         self::debug(
@@ -98,9 +98,9 @@ class LiveSyncImport {
     }
   }
 
-  public static async function genMandatoriesSet(
+  public static function mandatoriesSet(
     stdClass $level,
-  ): Awaitable<bool> {
+  ): bool {
     if (property_exists($level, 'title') === false) {
       return false;
     }
@@ -113,9 +113,9 @@ class LiveSyncImport {
     return true;
   }
 
-  public static async function genDefaults(
+  public static function defaults(
     stdClass $level,
-  ): Awaitable<stdClass> {
+  ): stdClass {
     if (property_exists($level, 'active') === false) {
       $level->active = true;
     }
@@ -123,7 +123,7 @@ class LiveSyncImport {
       $level->type = 'flag';
     }
     if (property_exists($level, 'entity_iso_code') === false) {
-      $countries = await Country::genAllAvailableCountries();
+      $countries = Country::allAvailableCountries();
       $country = $countries[array_rand($countries)];
       $country_id = $country->getId();
       $level->entity_iso_code = $country->getIsoCode();
@@ -147,11 +147,11 @@ class LiveSyncImport {
     return $level;
   }
 
-  public static async function genDownloadData(
+  public static function downloadData(
     string $url,
     bool $check_certificates,
-  ): Awaitable<string> {
-    $headers = array();
+  ): string {
+    $headers = [];
     if (strpos($url, '|')) {
       $url_options = explode("|", $url);
       $url = array_shift($url_options);
@@ -177,23 +177,21 @@ class LiveSyncImport {
     return $json;
   }
 
-  public static async function genLevel(
+  public static function level(
     string $url,
     stdClass $level,
     bool $debug,
-  ): Awaitable<int> {
-    $level_exists = await self::genLevelExists($level);
+  ): int {
+    $level_exists = self::levelExists($level);
     if ($level_exists === false) {
-      $level->entity_iso_code = await self::genCountry($url, $level, $debug);
+      $level->entity_iso_code = self::country($url, $level, $debug);
     }
-    $level_exists = await self::genLevelExists($level);
+    $level_exists = self::levelExists($level);
     if ($level_exists === false) {
-      list($category_id, $country) = await \HH\Asio\va(
-        self::genCategory($url, $level, $debug),
-        Country::genCountry(strval($level->entity_iso_code)),
-      );
+      $category_id = self::category($url, $level, $debug);
+      $country = Country::getCountry(strval($level->entity_iso_code));
       $country_id = $country->getId();
-      $level_id = await Level::genCreate(
+      $level_id = Level::create(
         strval($level->type),
         strval($level->title),
         strval($level->description),
@@ -208,7 +206,7 @@ class LiveSyncImport {
         intval($level->penalty),
       );
       $level_active = (intval($level->active) === 1) ? true : false;
-      await Level::genSetStatus($level_id, $level_active);
+      Level::setStatus($level_id, $level_active);
       self::debug(
         $debug,
         $url,
@@ -216,13 +214,13 @@ class LiveSyncImport {
         'Level Created: '.strval($level->title),
       );
     } else {
-      $level_id = await Level::getLevelIdByTypeTitleCountry(
+      $level_id = Level::getLevelIdByTypeTitleCountry(
         strval($level->type),
         strval($level->title),
         strval($level->entity_iso_code),
       );
       $level_active = (intval($level->active) === 1) ? true : false;
-      await Level::genSetStatus($level_id, $level_active);
+      Level::setStatus($level_id, $level_active);
       self::debug(
         $debug,
         $url,
@@ -233,10 +231,10 @@ class LiveSyncImport {
     return intval($level_id);
   }
 
-  public static async function genLevelExists(
+  public static function levelExists(
     stdClass $level,
-  ): Awaitable<bool> {
-    $level_exists = await Level::genAlreadyExist(
+  ): bool {
+    $level_exists = Level::alreadyExist(
       strval($level->type),
       strval($level->title),
       strval($level->entity_iso_code),
@@ -244,24 +242,24 @@ class LiveSyncImport {
     return $level_exists;
   }
 
-  public static async function genCountry(
+  public static function country(
     string $url,
     stdClass $level,
     bool $debug,
-  ): Awaitable<string> {
-    $country = await Country::genCountry(strval($level->entity_iso_code));
+  ): string {
+    $country = Country::getCountry(strval($level->entity_iso_code));
     $country_used = $country->getUsed();
     if (($country_used === true) ||
         ((property_exists($level, 'random_country')) &&
          ($level->random_country === true))) {
-      $level_exists = await Level::genAlreadyExistUnknownCountry(
+      $level_exists = Level::alreadyExistUnknownCountry(
         strval($level->type),
         strval($level->title),
         strval($level->description),
         intval($level->points),
       );
       if ($level_exists === false) {
-        $countries = await Country::genAllAvailableCountries();
+        $countries = Country::allAvailableCountries();
         $new_country = $countries[array_rand($countries)];
         self::debug(
           $debug,
@@ -275,13 +273,13 @@ class LiveSyncImport {
         return strval($new_country->getIsoCode());
       } else {
         $level_exists = true;
-        $existing_level = await Level::genLevelUnknownCountry(
+        $existing_level = Level::levelUnknownCountry(
           strval($level->type),
           strval($level->title),
           strval($level->description),
           intval($level->points),
         );
-        $new_country = await Country::gen($existing_level->getEntityId());
+        $new_country = Country::get($existing_level->getEntityId());
         self::debug(
           $debug,
           $url,
@@ -294,20 +292,20 @@ class LiveSyncImport {
         return strval($new_country->getIsoCode());
       }
     } else {
-      $level_exists = await Level::genAlreadyExistUnknownCountry(
+      $level_exists = Level::alreadyExistUnknownCountry(
         strval($level->type),
         strval($level->title),
         strval($level->description),
         intval($level->points),
       );
       if ($level_exists === true) {
-        $existing_level = await Level::genLevelUnknownCountry(
+        $existing_level = Level::levelUnknownCountry(
           strval($level->type),
           strval($level->title),
           strval($level->description),
           intval($level->points),
         );
-        $new_country = await Country::gen($existing_level->getEntityId());
+        $new_country = Country::get($existing_level->getEntityId());
         self::debug(
           $debug,
           $url,
@@ -323,16 +321,16 @@ class LiveSyncImport {
     return strval($level->entity_iso_code);
   }
 
-  public static async function genCategory(
+  public static function category(
     string $url,
     stdClass $level,
     bool $debug,
-  ): Awaitable<int> {
+  ): int {
     $category_exists =
-      await Category::genCheckExists(strval($level->category));
+      Category::checkExists(strval($level->category));
     if ($category_exists === false) {
       $category_id =
-        await Category::genCreate(strval($level->category), false);
+        Category::create(strval($level->category), false);
       self::debug(
         $debug,
         $url,
@@ -341,7 +339,7 @@ class LiveSyncImport {
       );
     } else {
       $category =
-        await Category::genSingleCategoryByName(strval($level->category));
+        Category::singleCategoryByName(strval($level->category));
       $category_id = $category->getId();
       self::debug(
         $debug,
@@ -353,12 +351,12 @@ class LiveSyncImport {
     return intval($category_id);
   }
 
-  public static async function genTeamCaptures(
+  public static function teamCaptures(
     string $url,
     stdClass $level,
     int $level_id,
     bool $debug,
-  ): Awaitable<array> {
+  ): array {
     $teams = json_decode(json_encode($level->teams), true);
     uasort(
       $teams,
@@ -366,20 +364,20 @@ class LiveSyncImport {
         return strtotime($a['timestamp']) - strtotime($b['timestamp']);
       },
     );
-    $teams_array = array();
-    $teams = await self::genTeamDefaults($teams);
+    $teams_array = [];
+    $teams = self::teamDefaults($teams);
     foreach ($teams as $team_livesync_key => $team_data) {
       list($type, $username, $key) = explode(':', $team_livesync_key);
       if ($type === 'general') {
         continue;
       }
       $team_exists =
-        await Team::genLiveSyncKeyExists(strval($team_livesync_key));
+        Team::liveSyncKeyExists(strval($team_livesync_key));
       if ($team_exists === true) {
         $team =
-          await Team::genTeamFromLiveSyncKey(strval($team_livesync_key));
+          Team::teamFromLiveSyncKey(strval($team_livesync_key));
         $team_id = $team->getId();
-        $hint_used = await self::genLogHint(
+        $hint_used = self::logHint(
           $url,
           $level,
           $level_id,
@@ -387,7 +385,7 @@ class LiveSyncImport {
           intval($team_data['hint']),
           $debug,
         );
-        await self::genScoreLevel(
+        self::scoreLevel(
           $url,
           $level,
           $level_id,
@@ -396,7 +394,7 @@ class LiveSyncImport {
           strval($team_data['timestamp']),
           $debug,
         );
-        await self::genUpdateTeamScores(
+        self::updateTeamScores(
           $url,
           $level,
           $team_id,
@@ -420,9 +418,9 @@ class LiveSyncImport {
     return $teams_array;
   }
 
-  public static async function genTeamDefaults(
+  public static function teamDefaults(
     array $teams,
-  ): Awaitable<array> {
+  ): array {
     foreach ($teams as $team_key => $team) {
       if (array_key_exists('capture', $team) === false) {
         $teams[$team_key]['capture'] = false;
@@ -434,21 +432,21 @@ class LiveSyncImport {
     return $teams;
   }
 
-  public static async function genLogHint(
+  public static function logHint(
     string $url,
     stdClass $level,
     int $level_id,
     int $team_id,
     int $hint,
     bool $debug,
-  ): Awaitable<bool> {
-    $team = await MultiTeam::genTeam($team_id);
+  ): bool {
+    $team = MultiTeam::team($team_id);
     $team_name = $team->getName();
     $hint_used = false;
     if ($hint === 1) {
-      $hint_used = await HintLog::genPreviousHint($level_id, $team_id, false);
+      $hint_used = HintLog::previousHint($level_id, $team_id, false);
       if ($hint_used === false) {
-        await HintLog::genLogGetHint(
+        HintLog::logGetHint(
           $level_id,
           $team_id,
           intval($level->penalty),
@@ -476,7 +474,7 @@ class LiveSyncImport {
     return false;
   }
 
-  public static async function genScoreLevel(
+  public static function scoreLevel(
     string $url,
     stdClass $level,
     int $level_id,
@@ -484,17 +482,15 @@ class LiveSyncImport {
     int $capture,
     string $timestamp,
     bool $debug,
-  ): Awaitable<void> {
+  ): void {
     if ($capture === 1) {
-      list($team, $level_capture) = await \HH\Asio\va(
-        MultiTeam::genTeam($team_id),
-        Level::genScoreLevel($level_id, $team_id),
-      );
+      $team = MultiTeam::team($team_id);
+      $level_capture = Level::scoreLevel($level_id, $team_id);
       $team_name = $team->getName();
 
       if ($level_capture === true) {
-        $scorelog = await ScoreLog::genLevelScoreByTeam($team_id, $level_id);
-        await ScoreLog::genScoreLogUpdate(
+        $scorelog = ScoreLog::levelScoreByTeam($team_id, $level_id);
+        ScoreLog::scoreLogUpdate(
           $level_id,
           $team_id,
           $scorelog->getPoints(),
@@ -523,18 +519,18 @@ class LiveSyncImport {
     }
   }
 
-  public static async function genUpdateTeamScores(
+  public static function updateTeamScores(
     string $url,
     stdClass $level,
     int $team_id,
     int $hint,
     bool $hint_used,
     bool $debug,
-  ): Awaitable<void> {
+  ): void {
     if (($hint === 1) && ($hint_used === true)) {
-      $team = await MultiTeam::genTeam($team_id);
+      $team = MultiTeam::team($team_id);
       $team_name = $team->getName();
-      await Team::genUpdate(
+      Team::update(
         strval($team_name),
         $team->getLogo(),
         $team->getPoints() - intval($level->penalty),
@@ -543,20 +539,20 @@ class LiveSyncImport {
     }
   }
 
-  public static async function genRecalculateScores(
+  public static function recalculateScores(
     string $url,
     stdClass $level,
     int $level_id,
     array $teams,
     bool $debug,
-  ): Awaitable<void> {
+  ): void {
     $level_captured = 0;
-    $current_level = await Level::gen($level_id);
+    $current_level = Level::get($level_id);
     foreach ($teams as $team_id => $team_data) {
       if (intval($team_data['capture']) === 0) {
         continue;
       }
-      $team = await MultiTeam::genTeam($team_id);
+      $team = MultiTeam::team($team_id);
       $team_name = $team->getName();
       $current_bonus =
         $level->bonus - (intval($level->bonus_dec) * $level_captured);
@@ -564,14 +560,12 @@ class LiveSyncImport {
         $current_bonus = 0;
       }
       $points = intval($level->points) + $current_bonus;
-      $scorelog = await ScoreLog::genLevelScoreByTeam($team_id, $level_id);
+      $scorelog = ScoreLog::levelScoreByTeam($team_id, $level_id);
       $existing_points = $scorelog->getPoints();
       $total_points = $team->getPoints();
       $total_points += $points - $existing_points;
-      await \HH\Asio\va(
-        Team::genTeamUpdatePoints($team_id, $total_points),
-        ScoreLog::genUpdateScoreLogBonus($level_id, $team_id, $points),
-      );
+      Team::teamUpdatePoints($team_id, $total_points);
+      ScoreLog::updateScoreLogBonus($level_id, $team_id, $points);
       $level_captured++;
     }
     if ($level_captured > 0) {
@@ -604,9 +598,7 @@ class LiveSyncImport {
 }
 
 while (1) {
-  \HH\Asio\join(
-    LiveSyncImport::genProcess($urls, $check_certificates, $debug),
-  );
+  LiveSyncImport::process($urls, $check_certificates, $debug);
   sleep($sleep);
 
   // Flush the local cache before the next import cycle to ensure we get up-to-date team and level data (the script runs continuously).

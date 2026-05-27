@@ -1,12 +1,12 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 abstract class ModuleController {
 
-  abstract public function genRender(): Awaitable<:xhp>;
+  abstract public function render(): string;
 
   public function sendRender(): void {
     try {
-      echo \HH\Asio\join($this->genRender());
+      echo $this->render();
     } catch (RedirectException $e) {
       echo '';
     }

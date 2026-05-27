@@ -1,4 +1,4 @@
-<?hh
+<?php declare(strict_types=1);
 
 if (php_sapi_name() !== 'cli') {
   http_response_code(405); // method not allowed
@@ -24,15 +24,15 @@ require_once (__DIR__.'/../models/Announcement.php');
 require_once (__DIR__.'/../models/ActivityLog.php');
 
 while (1) {
-  \HH\Asio\join(Control::genAutoRun());
+  Control::autoRun();
 
-  $conf_sleep = \HH\Asio\join(Configuration::gen('autorun_cycle'));
+  $conf_sleep = Configuration::get('autorun_cycle');
   $conf_sleep_secs = intval($conf_sleep->getValue());
   $sleep = $conf_sleep_secs;
-  $conf_game = \HH\Asio\join(Configuration::gen('game'));
-  $config_start_ts = \HH\Asio\join(Configuration::gen('start_ts'));
+  $conf_game = Configuration::get('game');
+  $config_start_ts = Configuration::get('start_ts');
   $start_ts = intval($config_start_ts->getValue());
-  $config_end_ts = \HH\Asio\join(Configuration::gen('end_ts'));
+  $config_end_ts = Configuration::get('end_ts');
   $end_ts = intval($config_end_ts->getValue());
 
   if (($conf_game->getValue() === '1') &&

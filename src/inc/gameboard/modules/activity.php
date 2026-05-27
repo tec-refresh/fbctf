@@ -1,21 +1,18 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 require_once ($_SERVER['DOCUMENT_ROOT'].'/../vendor/autoload.php');
 
 class ActivityModuleController extends ModuleController {
-  public async function genRender(): Awaitable<:xhp> {
+  public function render(): string {
 
-    /* HH_IGNORE_ERROR[1002] */
     SessionUtils::sessionStart();
     SessionUtils::enforceLogin();
 
-    await tr_start();
-    $activity_ul = <ul class="activity-stream"></ul>;
+    tr_start();
+    $items = '';
 
-    list($all_activity, $config) = await \HH\Asio\va(
-      ActivityLog::genAllActivity(),
-      Configuration::gen('language'),
-    );
+    $all_activity = ActivityLog::allActivity();
+    $config = Configuration::get('language');
     $language = $config->getValue();
     $activity_count = count($all_activity);
     $activity_limit = ($activity_count > 100) ? 100 : $activity_count;
@@ -45,49 +42,46 @@ class ActivityModuleController extends ModuleController {
         }
         if ($entity_type === 'Country') {
           $formatted_entity = locale_get_display_region(
-            '-'.$activity->getFormattedEntity(),
+            '-' . $activity->getFormattedEntity(),
             $language,
           );
         } else {
           $formatted_entity = $activity->getFormattedEntity();
         }
-        $activity_ul->appendChild(
-          <li class={$class_li}>
-            [ {time_ago($ts)} ]
-            <span class={$class_span}>
-              {$activity->getFormattedSubject()}
-            </span>&nbsp;{tr($activity->getAction())}&nbsp;
-            {$formatted_entity}
-          </li>
-        );
+        $items .=
+          '<li class="' . htmlspecialchars($class_li) . '">' .
+            '[ ' . htmlspecialchars(time_ago($ts)) . ' ]' .
+            '<span class="' . htmlspecialchars($class_span) . '">' .
+              htmlspecialchars($activity->getFormattedSubject()) .
+            '</span>&nbsp;' . htmlspecialchars(tr($activity->getAction())) . '&nbsp;' .
+            htmlspecialchars($formatted_entity) .
+          '</li>';
       } else {
-        $activity_ul->appendChild(
-          <li class={'opponent-team'}>
-            [ {time_ago($ts)} ]
-            <span class={'opponent-name'}>
-              {$activity->getFormattedMessage()}
-            </span>
-          </li>
-        );
+        $items .=
+          '<li class="opponent-team">' .
+            '[ ' . htmlspecialchars(time_ago($ts)) . ' ]' .
+            '<span class="opponent-name">' .
+              htmlspecialchars($activity->getFormattedMessage()) .
+            '</span>' .
+          '</li>';
       }
     }
 
     return
-      <div>
-        <header class="module-header">
-          <h6>{tr('Activity')}</h6>
-        </header>
-        <div class="module-content">
-          <div class="fb-section-border">
-            <div class="module-scrollable">
-              {$activity_ul}
-            </div>
-          </div>
-        </div>
-      </div>;
+      '<div>' .
+        '<header class="module-header">' .
+          '<h6>' . htmlspecialchars(tr('Activity')) . '</h6>' .
+        '</header>' .
+        '<div class="module-content">' .
+          '<div class="fb-section-border">' .
+            '<div class="module-scrollable">' .
+              '<ul class="activity-stream">' . $items . '</ul>' .
+            '</div>' .
+          '</div>' .
+        '</div>' .
+      '</div>';
   }
 }
 
-/* HH_IGNORE_ERROR[1002] */
 $activity_generated = new ActivityModuleController();
 $activity_generated->sendRender();

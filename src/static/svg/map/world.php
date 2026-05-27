@@ -1,54 +1,53 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 require_once ($_SERVER['DOCUMENT_ROOT'].'/../vendor/autoload.php');
 
 class WorldMapController extends ModuleController {
-  public async function genRender(): Awaitable<:xhp> {
+  public function render(): string {
 
-    /* HH_IGNORE_ERROR[1002] */
     SessionUtils::sessionStart();
     SessionUtils::enforceLogin();
 
-    $worldMap = await $this->genRenderWorldMap();
+    $worldMap = $this->renderWorldMap();
     return
-      <svg
-        id="fb-gameboard-map"
-        xmlns="http://www.w3.org/2000/svg"
-        amcharts="http://amcharts.com/ammap"
-        xlink="http://www.w3.org/1999/xlink"
-        viewBox="0 0 1008 651"
-        preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <amcharts:ammap
-            projection="mercator"
-            leftLongitude="-169.6"
-            topLatitude="83.68"
-            rightLongitude="190.25"
-            bottomLatitude="-55.55">
-          </amcharts:ammap>
-        </defs>
-        <g class="view-controller">
-          {$worldMap}
-          <g class="country-hover"></g>
-        </g>
-      </svg>;
+      '<svg' .
+        ' id="fb-gameboard-map"' .
+        ' xmlns="http://www.w3.org/2000/svg"' .
+        ' amcharts="http://amcharts.com/ammap"' .
+        ' xlink="http://www.w3.org/1999/xlink"' .
+        ' viewBox="0 0 1008 651"' .
+        ' preserveAspectRatio="xMidYMid meet">' .
+        '<defs>' .
+          '<amcharts:ammap' .
+            ' projection="mercator"' .
+            ' leftLongitude="-169.6"' .
+            ' topLatitude="83.68"' .
+            ' rightLongitude="190.25"' .
+            ' bottomLatitude="-55.55">' .
+          '</amcharts:ammap>' .
+        '</defs>' .
+        '<g class="view-controller">' .
+          $worldMap .
+          '<g class="country-hover"></g>' .
+        '</g>' .
+      '</svg>';
   }
 
-  public async function genRenderWorldMap(): Awaitable<:xhp> {
-    $svg_countries = <g class="countries"></g>;
+  public function renderWorldMap(): string {
+    $svg_countries = '';
 
-    $all_levels = await Level::genAllLevels();
-    $all_map_countries = await Country::genAllCountriesForMap();
+    $all_levels = Level::allLevels();
+    $all_map_countries = Country::allCountriesForMap();
 
-    $levels_map = Map {};
+    $levels_map = [];
     foreach ($all_levels as $level) {
       $levels_map[$level->getEntityId()] = $level;
     }
 
     foreach ($all_map_countries as $country) {
-      $gameboard = await Configuration::gen('gameboard');
+      $gameboard = Configuration::get('gameboard');
       if ($gameboard->getValue() === '1') {
-        $level = $levels_map->get($country->getId());
+        $level = $levels_map[$country->getId()] ?? null;
         $is_active_level = $level !== null && $level->getActive();
         $path_class =
           ($country->getUsed() && $is_active_level) ? 'land active' : 'land';
@@ -56,12 +55,12 @@ class WorldMapController extends ModuleController {
         $data_captured = null;
 
         if ($level) {
-          $my_previous_score = await ScoreLog::genAllPreviousScore(
+          $my_previous_score = ScoreLog::allPreviousScore(
             $level->getId(),
             SessionUtils::sessionTeam(),
             false,
           );
-          $other_previous_score = await ScoreLog::genPreviousScore(
+          $other_previous_score = ScoreLog::previousScore(
             $level->getId(),
             SessionUtils::sessionTeam(),
             true,
@@ -72,10 +71,10 @@ class WorldMapController extends ModuleController {
           } else if ($other_previous_score) {
             $map_indicator .= 'captured--opponent';
             $completed_by =
-              await MultiTeam::genCompletedLevel($level->getId());
+              MultiTeam::completedLevel($level->getId());
             $data_captured = '';
             foreach ($completed_by as $c) {
-              $data_captured .= ' '.$c->getName();
+              $data_captured .= ' ' . $c->getName();
             }
           }
         }
@@ -85,28 +84,27 @@ class WorldMapController extends ModuleController {
         $data_captured = null;
       }
 
-      $g =
-        <g>
-          <path
-            id={$country->getIsoCode()}
-            title={$country->getName()}
-            class={$path_class}
-            d={$country->getD()}>
-          </path>
-          <g transform={$country->getTransform()} class={$map_indicator}>
-            <path d="M0,9.1L4.8,0h0.1l4.8,9.1v0L0,9.1L0,9.1z"></path>
-          </g>
-        </g>;
+      $data_captured_attr = '';
       if ($data_captured) {
-        $g->setAttribute('data-captured', $data_captured);
+        $data_captured_attr = ' data-captured="' . htmlspecialchars($data_captured) . '"';
       }
-      $svg_countries->appendChild($g);
+      $svg_countries .=
+        '<g' . $data_captured_attr . '>' .
+          '<path' .
+            ' id="' . htmlspecialchars($country->getIsoCode()) . '"' .
+            ' title="' . htmlspecialchars($country->getName()) . '"' .
+            ' class="' . htmlspecialchars($path_class) . '"' .
+            ' d="' . htmlspecialchars($country->getD()) . '">' .
+          '</path>' .
+          '<g transform="' . htmlspecialchars($country->getTransform()) . '" class="' . htmlspecialchars($map_indicator) . '">' .
+            '<path d="M0,9.1L4.8,0h0.1l4.8,9.1v0L0,9.1L0,9.1z"></path>' .
+          '</g>' .
+        '</g>';
     }
 
-    return $svg_countries;
+    return '<g class="countries">' . $svg_countries . '</g>';
   }
 }
 
-/* HH_IGNORE_ERROR[1002] */
 $map = new WorldMapController();
 $map->sendRender();
