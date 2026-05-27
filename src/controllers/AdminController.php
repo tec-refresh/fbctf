@@ -886,7 +886,7 @@ class AdminController extends Controller {
       if ($cookie === $session->getCookie()) {
         $session_data = Session::sessionDataIfExist($cookie); // TODO: Combine Awaits
         Session::setTeamId($cookie, $session_data); // TODO: Combine Awaits
-        $session = Session::get($cookie); // TODO: Combine Awaits
+        $session = Session::sessionExistGet($cookie); // TODO: Combine Awaits
       } else if ($session->getTeamId() === 0) {
         continue;
       }
