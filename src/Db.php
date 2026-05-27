@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 class Db {
-    private string $settings_file = '../settings.ini';
+    private string $settings_file = __DIR__ . '/../settings.ini';
     private ?array $config = null;
     private static ?Db $instance = null;
     private ?PDO $conn = null;

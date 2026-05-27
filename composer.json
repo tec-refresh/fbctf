@@ -10,7 +10,10 @@
         "phpunit/phpunit": "^10.0"
     },
     "autoload": {
-        "classmap": ["src/", "tests/"],
+        "classmap": ["src/"],
         "files": ["src/Utils.php", "src/language/language.php"]
+    },
+    "autoload-dev": {
+        "classmap": ["tests/"]
     }
 }

@@ -16,11 +16,11 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/fbctf
 COPY composer.json composer.lock* ./
-RUN composer install --no-dev --optimize-autoloader || true
-
 COPY src/ src/
 COPY extra/settings.ini.docker settings.ini
 COPY extra/hash.php extra/hash.php
+
+RUN composer install --no-dev --optimize-autoloader
 
 RUN mkdir -p attachments attachments/deleted src/data/customlogos \
     && chown -R www-data:www-data attachments src/data/customlogos

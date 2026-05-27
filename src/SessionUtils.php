@@ -45,20 +45,19 @@ class SessionUtils {
     session_regenerate_id(true);
   }
 
-  public function open(string $path, string $name): bool {
+  public static function open(string $path, string $name): bool {
     return true;
   }
 
-  public function close(): bool {
+  public static function close(): bool {
     return true;
   }
 
-  public function read(string $cookie): string {
-    $session = Session::sessionDataIfExist($cookie);
-    return $session;
+  public static function read(string $cookie): string {
+    return Session::sessionDataIfExist($cookie);
   }
 
-  public function write(string $cookie, string $data): bool {
+  public static function write(string $cookie, string $data): bool {
     $session_exists = Session::sessionExist($cookie);
     if ($session_exists) {
       Session::update($cookie, $data);
@@ -71,12 +70,12 @@ class SessionUtils {
     return true;
   }
 
-  public function destroy(string $cookie): bool {
+  public static function destroy(string $cookie): bool {
     Session::delete($cookie);
     return true;
   }
 
-  public function gc(int $maxlifetime): bool {
+  public static function gc(int $maxlifetime): bool {
     Session::cleanup($maxlifetime);
     return true;
   }

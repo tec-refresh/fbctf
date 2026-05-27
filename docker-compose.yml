@@ -35,17 +35,16 @@ services:
       - "443:443"
 
   mysql:
-    image: mysql:8.0
     restart: always
+    build:
+      context: .
+      dockerfile: extra/mysql/Dockerfile
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: fbctf
       MYSQL_USER: ctf
       MYSQL_PASSWORD: ctf
     volumes:
-      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./database/countries.sql:/docker-entrypoint-initdb.d/02-countries.sql
-      - ./database/logos.sql:/docker-entrypoint-initdb.d/03-logos.sql
       - mysql_data:/var/lib/mysql
     expose:
       - "3306"

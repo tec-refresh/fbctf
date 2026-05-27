@@ -25,9 +25,9 @@ abstract class Model {
    */
   protected static function getMc(): Memcached {
     if (self::$mc === null) {
-      $config = parse_ini_file('../../settings.ini');
+      $config = parse_ini_file(__DIR__ . '/../../settings.ini');
       $cluster = must_have_idx($config, 'MC_HOST');
-      $port = must_have_idx($config, 'MC_PORT');
+      $port = (int)must_have_idx($config, 'MC_PORT');
       if (is_array($cluster)) {
         $host = $cluster[array_rand($cluster)];
       } else {
@@ -55,9 +55,9 @@ abstract class Model {
    */
   protected static function getMcWrite(): Memcached {
     if (self::$mc_write === null) {
-      $config = parse_ini_file('../../settings.ini');
+      $config = parse_ini_file(__DIR__ . '/../../settings.ini');
       $cluster = must_have_idx($config, 'MC_HOST');
-      $port = must_have_idx($config, 'MC_PORT');
+      $port = (int)must_have_idx($config, 'MC_PORT');
       self::$mc_write = new Memcached();
       if (is_array($cluster)) {
         foreach ($cluster as $node) {

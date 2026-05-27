@@ -15,8 +15,8 @@ class IndexController extends Controller {
         'action' => [
           'filter' => FILTER_VALIDATE_REGEXP,
           'options' => ['regexp' => '/^[\w-]+$/'],
-        ),
-      ),
+        ],
+      ],
     ];
   }
   protected function getPages(): array {
@@ -142,13 +142,13 @@ class IndexController extends Controller {
     $facebook_enabled = $awaitables_results['facebook_enabled'];
     $google_enabled = $awaitables_results['google_enabled'];
 
-    if (!($login_facebook instanceof Configuration)) { throw new \RuntimeException('login_facebook should be of type Configuration',); ];
-    if (!($login_google instanceof Configuration)) { throw new \RuntimeException('login_google should be of type Configuration',); ];
-    if (!($registration_players instanceof Configuration)) { throw new \RuntimeException('registration_players should be of type Configuration',); ];
-    if (!($registration_facebook instanceof Configuration)) { throw new \RuntimeException('registration_facebook should be of type Configuration',); ];
-    if (!($registration_google instanceof Configuration)) { throw new \RuntimeException('registration_google should be of type Configuration',); ];
-    if (!($registration_type instanceof Configuration)) { throw new \RuntimeException('registration_type should be of type Configuration',); ];
-    if (!($ldap instanceof Configuration)) { throw new \RuntimeException('ldap should be of type Configuration',); ];
+    if (!($login_facebook instanceof Configuration)) { throw new \RuntimeException('login_facebook should be of type Configuration'); }
+    if (!($login_google instanceof Configuration)) { throw new \RuntimeException('login_google should be of type Configuration'); }
+    if (!($registration_players instanceof Configuration)) { throw new \RuntimeException('registration_players should be of type Configuration'); }
+    if (!($registration_facebook instanceof Configuration)) { throw new \RuntimeException('registration_facebook should be of type Configuration'); }
+    if (!($registration_google instanceof Configuration)) { throw new \RuntimeException('registration_google should be of type Configuration'); }
+    if (!($registration_type instanceof Configuration)) { throw new \RuntimeException('registration_type should be of type Configuration'); }
+    if (!($ldap instanceof Configuration)) { throw new \RuntimeException('ldap should be of type Configuration'); }
 
     $players = intval($registration_players->getValue());
     $names_ul = '<ul>';
@@ -244,12 +244,12 @@ class IndexController extends Controller {
     $facebook_enabled = $awaitables_results['facebook_enabled'];
     $google_enabled = $awaitables_results['google_enabled'];
 
-    if (!($login_facebook instanceof Configuration)) { throw new \RuntimeException('login_facebook should be of type Configuration',); ];
-    if (!($login_google instanceof Configuration)) { throw new \RuntimeException('login_google should be of type Configuration',); ];
-    if (!($registration_facebook instanceof Configuration)) { throw new \RuntimeException('registration_facebook should be of type Configuration',); ];
-    if (!($registration_google instanceof Configuration)) { throw new \RuntimeException('registration_google should be of type Configuration',); ];
-    if (!($registration_type instanceof Configuration)) { throw new \RuntimeException('registration_type should be of type Configuration',); ];
-    if (!($ldap instanceof Configuration)) { throw new \RuntimeException('ldap should be of type Configuration',); ];
+    if (!($login_facebook instanceof Configuration)) { throw new \RuntimeException('login_facebook should be of type Configuration'); }
+    if (!($login_google instanceof Configuration)) { throw new \RuntimeException('login_google should be of type Configuration'); }
+    if (!($registration_facebook instanceof Configuration)) { throw new \RuntimeException('registration_facebook should be of type Configuration'); }
+    if (!($registration_google instanceof Configuration)) { throw new \RuntimeException('registration_google should be of type Configuration'); }
+    if (!($registration_type instanceof Configuration)) { throw new \RuntimeException('registration_type should be of type Configuration'); }
+    if (!($ldap instanceof Configuration)) { throw new \RuntimeException('ldap should be of type Configuration'); }
 
     if ($registration_type->getValue() === '2') {
       $token_field =
@@ -329,10 +329,10 @@ class IndexController extends Controller {
     $facebook_enabled = $awaitables_results['facebook_enabled'];
     $google_enabled = $awaitables_results['google_enabled'];
 
-    if (!($registration instanceof Configuration)) { throw new \RuntimeException('registration should be of type Configuration',); ];
-    if (!($registration_facebook instanceof Configuration)) { throw new \RuntimeException('registration_facebook should be of type Configuration',); ];
-    if (!($registration_google instanceof Configuration)) { throw new \RuntimeException('registration_google should be of type Configuration',); ];
-    if (!($registration_names instanceof Configuration)) { throw new \RuntimeException('registration_names should be of type Configuration',); ];
+    if (!($registration instanceof Configuration)) { throw new \RuntimeException('registration should be of type Configuration'); }
+    if (!($registration_facebook instanceof Configuration)) { throw new \RuntimeException('registration_facebook should be of type Configuration'); }
+    if (!($registration_google instanceof Configuration)) { throw new \RuntimeException('registration_google should be of type Configuration'); }
+    if (!($registration_names instanceof Configuration)) { throw new \RuntimeException('registration_names should be of type Configuration'); }
 
     if ($registration->getValue() === '1') {
       if ($registration_names->getValue() === '1') {
@@ -395,13 +395,13 @@ class IndexController extends Controller {
     $facebook_enabled = $awaitables_results['facebook_enabled'];
     $google_enabled = $awaitables_results['google_enabled'];
 
-    if (!($login instanceof Configuration)) { throw new \RuntimeException('login should be of type Configuration',); ];
-    if (!($login_facebook instanceof Configuration)) { throw new \RuntimeException('login_facebook should be of type Configuration',); ];
-    if (!($login_google instanceof Configuration)) { throw new \RuntimeException('login_google should be of type Configuration',); ];
-    if (!($registration instanceof Configuration)) { throw new \RuntimeException('registration should be of type Configuration',); ];
-    if (!($registration_facebook instanceof Configuration)) { throw new \RuntimeException('registration_facebook should be of type Configuration',); ];
-    if (!($registration_google instanceof Configuration)) { throw new \RuntimeException('registration_google should be of type Configuration',); ];
-    if (!($ldap instanceof Configuration)) { throw new \RuntimeException('ldap should be of type Configuration',); ];
+    if (!($login instanceof Configuration)) { throw new \RuntimeException('login should be of type Configuration'); }
+    if (!($login_facebook instanceof Configuration)) { throw new \RuntimeException('login_facebook should be of type Configuration'); }
+    if (!($login_google instanceof Configuration)) { throw new \RuntimeException('login_google should be of type Configuration'); }
+    if (!($registration instanceof Configuration)) { throw new \RuntimeException('registration should be of type Configuration'); }
+    if (!($registration_facebook instanceof Configuration)) { throw new \RuntimeException('registration_facebook should be of type Configuration'); }
+    if (!($registration_google instanceof Configuration)) { throw new \RuntimeException('registration_google should be of type Configuration'); }
+    if (!($ldap instanceof Configuration)) { throw new \RuntimeException('ldap should be of type Configuration'); }
 
     $ldap_domain_suffix = "";
     if ($ldap->getValue() === '1') {
