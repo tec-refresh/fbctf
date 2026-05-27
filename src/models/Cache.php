@@ -1,31 +1,31 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class Cache {
 
-  private Map<string, mixed> $CACHE = Map {};
+  private array $CACHE = [];
 
   public function __construct() {}
 
   public function setCache(string $key, mixed $value): void {
-    $this->CACHE->add(Pair {strval($key), $value});
+    $this->CACHE[$key] = $value;
   }
 
   public function getCache(string $key): mixed {
-    if ($this->CACHE->contains($key)) {
-      return $this->CACHE->get($key);
+    if (array_key_exists($key, $this->CACHE)) {
+      return $this->CACHE[$key];
     } else {
       return false;
     }
   }
 
   public function deleteCache(string $key): void {
-    if ($this->CACHE->contains($key)) {
-      $this->CACHE->remove($key);
+    if (array_key_exists($key, $this->CACHE)) {
+      unset($this->CACHE[$key]);
     }
   }
 
   public function flushCache(): void {
-    $this->CACHE = Map {};
+    $this->CACHE = [];
   }
 
 }
