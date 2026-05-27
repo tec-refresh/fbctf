@@ -1,37 +1,25 @@
-version: '2'
 services:
-  mysql:
+  php-fpm:
     restart: always
     build:
       context: .
-      dockerfile: extra/mysql/Dockerfile
-      #args:
-      #  MODE: prod
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-    expose:
-      - "3306"
-
-  cache:
-    restart: always
-    build:
-      context: .
-      dockerfile: extra/cache/Dockerfile
-      #args:
-      #  MODE: prod
-    expose:
-      - "11211"
-
-  hhvm:
-    restart: always
-    build:
-      context: .
-      dockerfile: extra/hhvm/Dockerfile
-      #args:
-      #  MODE: prod
+      dockerfile: extra/php-fpm/Dockerfile
     depends_on:
-      - mysql
-      - cache
+      mysql:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    volumes:
+      - attachments:/var/www/fbctf/attachments
+      - customlogos:/var/www/fbctf/src/data/customlogos
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: fbctf
+      DB_USERNAME: ctf
+      DB_PASSWORD: ctf
+      MC_HOST: cache
+      MC_PORT: "11211"
     expose:
       - "9000"
 
@@ -40,10 +28,40 @@ services:
     build:
       context: .
       dockerfile: extra/nginx/Dockerfile
-      #args:
-      #  MODE: prod
     depends_on:
-      - hhvm
+      - php-fpm
     ports:
       - "80:80"
       - "443:443"
+
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: fbctf
+      MYSQL_USER: ctf
+      MYSQL_PASSWORD: ctf
+    volumes:
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/countries.sql:/docker-entrypoint-initdb.d/02-countries.sql
+      - ./database/logos.sql:/docker-entrypoint-initdb.d/03-logos.sql
+      - mysql_data:/var/lib/mysql
+    expose:
+      - "3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  cache:
+    image: memcached:1.6
+    restart: always
+    expose:
+      - "11211"
+
+volumes:
+  mysql_data:
+  attachments:
+  customlogos:
