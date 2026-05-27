@@ -11,13 +11,9 @@ module.exports = {
       slideWidth: itemWidth,
       slideMargin: 20,
       pager: false,
-      controls: true,
       minSlides: 2,
       maxSlides: 5,
-      moveSlides: 3,
-      infiniteLoop: true,
-      prevText: '‹',
-      nextText: '›'
+      moveSlides: 1
     });
   }
 };

@@ -124,7 +124,7 @@ class IndexController extends Controller {
           '</svg>' .
         '</li>';
     }
-    return '<ul class="fb-slider slides">' . $logo_items . '</ul>';
+    return '<ul class="slides" style="display:flex;flex-wrap:wrap;list-style:none;padding:0;margin:0;gap:8px;">' . $logo_items . '</ul>';
   }
 
   public function renderRegistrationNames(): string {
