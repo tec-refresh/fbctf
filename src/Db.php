@@ -83,15 +83,31 @@ class Db {
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
-            PDO::ATTR_PERSISTENT => true,
         ]);
     }
 
     public function query(string $sql, array $params = []): PDOStatement {
-        $conn = $this->getConnection();
-        $stmt = $conn->prepare($sql);
-        $stmt->execute($params);
-        return $stmt;
+        try {
+            $conn = $this->getConnection();
+            $stmt = $conn->prepare($sql);
+            $stmt->execute($params);
+            return $stmt;
+        } catch (\PDOException $e) {
+            if ($this->isRetryable($e)) {
+                $this->disconnect();
+                $conn = $this->getConnection();
+                $stmt = $conn->prepare($sql);
+                $stmt->execute($params);
+                return $stmt;
+            }
+            throw $e;
+        }
+    }
+
+    private function isRetryable(\PDOException $e): bool {
+        $code = (int)$e->errorInfo[1];
+        // 2006 = server gone, 2013 = lost connection
+        return in_array($code, [2006, 2013], true);
     }
 
     public function lastInsertId(): string {

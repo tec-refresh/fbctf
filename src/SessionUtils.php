@@ -101,7 +101,7 @@ class SessionUtils {
   }
 
   public static function sessionActive(): bool {
-    return (bool) (array_key_exists('team_id', $_SESSION));
+    return isset($_SESSION) && array_key_exists('team_id', $_SESSION);
   }
 
   public static function enforceLogin(): void {
@@ -111,7 +111,7 @@ class SessionUtils {
   }
 
   public static function enforceAdmin(): void {
-    if (!array_key_exists('admin', $_SESSION)) {
+    if (!isset($_SESSION) || !array_key_exists('admin', $_SESSION)) {
       throw new LoginRedirectException();
     }
   }
