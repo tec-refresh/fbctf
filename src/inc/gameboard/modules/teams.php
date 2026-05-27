@@ -43,6 +43,7 @@ class TeamModuleController extends ModuleController {
           '<li>' .
             '<a href="#" data-team="' . htmlspecialchars($leader->getName()) . '">' .
               $image .
+              '<h6>' . htmlspecialchars($leader->getName()) . '</h6>' .
             '</a>' .
           '</li>';
       }

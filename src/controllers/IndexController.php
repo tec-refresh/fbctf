@@ -113,7 +113,18 @@ class IndexController extends Controller {
   }
 
   public function renderLogosSelection(): string {
-    return '<emblem-carousel />';
+    $all_logos = Logo::allEnabledLogos();
+    $logo_items = '';
+    foreach ($all_logos as $logo) {
+      $name = htmlspecialchars($logo->getName());
+      $logo_items .=
+        '<li>' .
+          '<svg class="icon--badge">' .
+            '<use xlink:href="#icon--badge-' . $name . '" />' .
+          '</svg>' .
+        '</li>';
+    }
+    return '<ul class="slides">' . $logo_items . '</ul>';
   }
 
   public function renderRegistrationNames(): string {
