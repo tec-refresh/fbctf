@@ -79,7 +79,7 @@ class IndexAjaxController extends AjaxController {
             return Utils::error_response('Login failed', 'login');
           }
         }
-        if (!(is_int($team_id))) { throw new \RuntimeException('team_id should be an int'); ];
+        if (!(is_int($team_id))) { throw new \RuntimeException('team_id should be an int'); }
 
         $password = must_have_string($params, 'password');
 
@@ -202,7 +202,7 @@ class IndexAjaxController extends AjaxController {
     // Verify that this team name is not created yet
     $team_exists = Team::teamExist($shortname);
     if (!$team_exists) {
-      if (!(is_string($password))) { throw new \RuntimeException("Expected password to be a string"); ];
+      if (!(is_string($password))) { throw new \RuntimeException("Expected password to be a string"); }
       $password_hash = Team::generateHash($password);
       $team_id =
         Team::create($shortname, $password_hash, $logo_name);
@@ -215,7 +215,7 @@ class IndexAjaxController extends AjaxController {
         }
         // If registration is tokenized, use the token
         if ($registration_type->getValue() === '2') {
-          if (!($token !== null)) { throw new \RuntimeException('token should not be null'); ];
+          if (!($token !== null)) { throw new \RuntimeException('token should not be null'); }
           Token::use($token, $team_id);
         }
         // Login the team

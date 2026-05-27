@@ -42,7 +42,7 @@ class TutorialModalController extends ModalController {
           'navigation',
           $header,
           $content,
-        );
+        ];
       case 'navigation':
         $content =
           '<div class="main-text">' . '<p>' . htmlspecialchars(tr(
@@ -60,7 +60,7 @@ class TutorialModalController extends ModalController {
           '<div class="main-text">' . '<p>' . htmlspecialchars(tr('Have fun, be the best and conquer the world.')) . '</p>' . '</div>';
         return [$step, tr('Game_On'), '', null, $content];
       default:
-        if (!(false)) { throw new \RuntimeException('invalid tutorial name'); ];
+        if (!(false)) { throw new \RuntimeException('invalid tutorial name'); }
     }
   }
   public function render(string $step): string {

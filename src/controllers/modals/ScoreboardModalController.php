@@ -52,8 +52,8 @@ class ScoreboardModalController extends ModalController {
           MultiTeam::pointsByType($team->getId(), 'flag'),
           MultiTeam::pointsByType($team->getId(), 'base'),
         ];
-        $scoreboard_tbody .= '<tr>' . '<td style="width: 10%;
-        $scoreboard_tbody .= '</tbody>';" class="el--radio">' . '<input type="checkbox" name="fb-scoreboard-filter" id="' . htmlspecialchars($team_id) . '" value="' . htmlspecialchars($team->getName()) . '" checked />' . '<label class="click-effect" for="' . htmlspecialchars($team_id) . '">' . '<span style="' . htmlspecialchars($style) . '">' . 'FU' . '</span>' . '</label>' . '</td>' . '<td style="width: 10%;">' . htmlspecialchars($rank) . '</td>' . '<td style="width: 40%;">' . htmlspecialchars($team->getName()) . '</td>' . '<td style="width: 10%;">' . htmlspecialchars(strval($quiz)) . '</td>' . '<td style="width: 10%;">' . htmlspecialchars(strval($flag)) . '</td>' . '<td style="width: 10%;">' . htmlspecialchars(strval($base)) . '</td>' . '<td style="width: 10%;">' . htmlspecialchars(strval($team->getPoints())) . '</td>' . '</tr>';
+        $scoreboard_tbody .= '<tr>' . '<td style="width: 10%;" class="el--radio">' . '<input type="checkbox" name="fb-scoreboard-filter" id="' . htmlspecialchars($team_id) . '" value="' . htmlspecialchars($team->getName()) . '" checked />' . '<label class="click-effect" for="' . htmlspecialchars($team_id) . '">' . '<span style="' . htmlspecialchars($style) . '">' . 'FU' . '</span>' . '</label>' . '</td>' . '<td style="width: 10%;">' . htmlspecialchars($rank) . '</td>' . '<td style="width: 40%;">' . htmlspecialchars($team->getName()) . '</td>' . '<td style="width: 10%;">' . htmlspecialchars(strval($quiz)) . '</td>' . '<td style="width: 10%;">' . htmlspecialchars(strval($flag)) . '</td>' . '<td style="width: 10%;">' . htmlspecialchars(strval($base)) . '</td>' . '<td style="width: 10%;">' . htmlspecialchars(strval($team->getPoints())) . '</td>' . '</tr>';
+        $scoreboard_tbody .= '</tbody>';
         $rank++;
       }
     }

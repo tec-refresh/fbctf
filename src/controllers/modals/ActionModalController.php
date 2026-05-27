@@ -100,12 +100,11 @@ class ActionModalController extends ModalController {
           '<h4>' . htmlspecialchars(tr('account_')) . '<span class="highlighted">' . htmlspecialchars(tr('Settings')) . '</span>' . '</h4>';
         $oauth_header = '';
         if (Configuration::getFacebookOAuthSettingsExists() === true) {
-          $linked = 
+          $linked =
             Team::teamOAuthTokenExists(
               'facebook_oauth',
-              SessionUtils::sessionTeam(,
-            ),
-          );
+              SessionUtils::sessionTeam(),
+            );
           $button_text = tr('Facebook');
           $button =
             '<a name="facebook-oauth-button" href="#" class="fb-cta cta--yellow js-trigger-facebook-oauth">' . htmlspecialchars(tr('Link Your')) . '<br />' . htmlspecialchars(tr($button_text)) . '<br />' . htmlspecialchars(tr('Account')) . '</a>';
@@ -123,12 +122,11 @@ class ActionModalController extends ModalController {
           $facebook_oauth_content = '';
         }
         if (Configuration::getGoogleOAuthFileExists() === true) {
-          $linked = 
+          $linked =
             Team::teamOAuthTokenExists(
               'google_oauth',
-              SessionUtils::sessionTeam(,
-            ),
-          );
+              SessionUtils::sessionTeam(),
+            );
           $button_text = tr('Google');
           $button =
             '<a name="google-oauth-button" href="#" class="fb-cta cta--yellow js-trigger-google-oauth">' . htmlspecialchars(tr('Link Your')) . '<br />' . htmlspecialchars(tr($button_text)) . '<br />' . htmlspecialchars(tr('Account')) . '</a>';
@@ -156,7 +154,7 @@ class ActionModalController extends ModalController {
               )) . '</p>' . '<br />' . '<form class="fb-form-no-padding account-link-form">' . '<input name="set_livesync_password" type="hidden" value="" />' . '<div class="form-el el--text">' . '<input placeholder="' . htmlspecialchars(tr('Set your live sync username')) . '" name="livesync_username" type="text" autocomplete="off" />' . '<input placeholder="' . htmlspecialchars(tr('Set your live sync password')) . '" name="livesync_password" type="password" autocomplete="off" />' . '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(SessionUtils::CSRFToken()) . '" />' . '</div>' . '<div class="action-actionable">' . '<a class="fb-cta cta--yellow js-trigger-account-save">' . htmlspecialchars(tr('Submit')) . '</a>' . '</div>' . '<span class="account-link-form-response highlighted--blue">' . '</span>' . '</form>' . '<div class="action-actionable">' . '<a href="#" class="fb-cta cta--red js-close-modal">' . htmlspecialchars(tr('Close')) . '</a>' . '</div>' . '</div>';
         return [$title, $content];
       default:
-        if (!(false)) { throw new \RuntimeException('Invalid modal name %s', strval($modal)); ];
+        if (!(false)) { throw new \RuntimeException('Invalid modal name %s', strval($modal)); }
     }
   }
   public function render(string $modal): string {

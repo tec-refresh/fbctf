@@ -93,26 +93,26 @@ class IntegrationOAuth {
     $javascript_close = "window.open('', '_self', ''); window.close();";
 
     $output =
-      <div class="fb-modal-content">
-        <script>{$javascript_status}</script>
-        <script>{$javascript_button}</script>
-        <script>{$javascript_close}</script>
-        <header class="modal-title">
-          {tr('Facebook OAuth')}
-          <a href="#" class="js-close-modal">
-            <svg class="icon icon--close">
-              <use href="#icon--close" />
-            </svg>
-          </a>
-        </header>
-        <span>{$message}</span>
-        <br />
-        <span>
-          <button onclick={"window.open('', '_self', ''); window.close();"}>
-            Close Window
-          </button>
-        </span>
-      </div>;
+      '<div class="fb-modal-content">' .
+        '<script>' . $javascript_status . '</script>' .
+        '<script>' . $javascript_button . '</script>' .
+        '<script>' . $javascript_close . '</script>' .
+        '<header class="modal-title">' .
+          htmlspecialchars(tr('Facebook OAuth')) .
+          '<a href="#" class="js-close-modal">' .
+            '<svg class="icon icon--close">' .
+              '<use href="#icon--close" />' .
+            '</svg>' .
+          '</a>' .
+        '</header>' .
+        '<span>' . $message . '</span>' .
+        '<br />' .
+        '<span>' .
+          '<button onclick="window.open(\'\', \'_self\', \'\'); window.close();">' .
+            'Close Window' .
+          '</button>' .
+        '</span>' .
+      '</div>';
 
     print $output;
   }

@@ -12,7 +12,7 @@ class AdminController extends Controller {
           'filter' => FILTER_VALIDATE_REGEXP,
           'options' => ['regexp' => '/^[\w-]+$/'],
         ],
-      ),
+      ],
     ];
   }
   protected function getPages(): array {
@@ -138,7 +138,7 @@ class AdminController extends Controller {
     $day_selected = $duration_unit === 'd';
 
     return
-      '<div class="fb-column-container">' . '<div class="col col-1-2">' . '<input type="number" value="' . htmlspecialchars($duration_value) . '" name="fb--conf--game_duration_value" />' . '</div>' . '<div class="col col-2-2">' . '<select name="fb--conf--game_duration_unit">' . '<option class="fb--conf--game_duration" value="m" ' . ($minute_selected ? ' selected' : '') . '>'Minutes' . '</option>' . '<option class="fb--conf--game_duration" value="h" ' . ($hour_selected ? ' selected' : '') . '>'Hours' . '</option>' . '<option class="fb--conf--game_duration" value="d" ' . ($day_selected ? ' selected' : '') . '>'Days' . '</option>' . '</select>' . '</div>' . '</div>';
+      '<div class="fb-column-container">' . '<div class="col col-1-2">' . '<input type="number" value="' . htmlspecialchars($duration_value) . '" name="fb--conf--game_duration_value" />' . '</div>' . '<div class="col col-2-2">' . '<select name="fb--conf--game_duration_unit">' . '<option class="fb--conf--game_duration" value="m" ' . ($minute_selected ? ' selected' : '') . '>' . 'Minutes' . '</option>' . '<option class="fb--conf--game_duration" value="h" ' . ($hour_selected ? ' selected' : '') . '>' . 'Hours' . '</option>' . '<option class="fb--conf--game_duration" value="d" ' . ($day_selected ? ' selected' : '') . '>' . 'Days' . '</option>' . '</select>' . '</div>' . '</div>';
   }
 
   private function languageSelect(): string {
@@ -475,7 +475,7 @@ class AdminController extends Controller {
         '<div style="display: inline">' . '<input type="hidden" name="level_id" value="' . htmlspecialchars($flag_id) . '" />' . '<a href="#" class="fb-cta cta--red js-delete-level" style="margin-right: 20px">' . htmlspecialchars(tr('Delete')) . '</a>' . '</div>';
 
       $attachments_div =
-        '<div class="attachments">' . '<div class="new-attachment new-attachment-hidden fb-column-container completely-hidden">' . '<div class="col col-pad col-1-3">' . '<div class="form-el">' . '<form class="attachment_form">' . '<input type="hidden" name="action" value="create_attachment" />' . '<input type="hidden" name="level_id" value="' . htmlspecialchars(strval($flag->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('New Attachment:')) . '</label>' . '<input name="filename" type="text" />' . '<input name="attachment_file" type="file" />' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-new-attachment">'X' . '</button>' . '<button class="fb-cta cta--yellow" data-action="create-attachment">' . htmlspecialchars(tr('Create')) . '</button>' . '</div>' . '</div>' . '</div>' . '</div>';
+        '<div class="attachments">' . '<div class="new-attachment new-attachment-hidden fb-column-container completely-hidden">' . '<div class="col col-pad col-1-3">' . '<div class="form-el">' . '<form class="attachment_form">' . '<input type="hidden" name="action" value="create_attachment" />' . '<input type="hidden" name="level_id" value="' . htmlspecialchars(strval($flag->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('New Attachment:')) . '</label>' . '<input name="filename" type="text" />' . '<input name="attachment_file" type="file" />' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-new-attachment">' . 'X' . '</button>' . '<button class="fb-cta cta--yellow" data-action="create-attachment">' . htmlspecialchars(tr('Create')) . '</button>' . '</div>' . '</div>' . '</div>' . '</div>';
 
       $attachments = Attachment::hasAttachments($flag->getId()); // TODO: Combine Awaits
       if ($attachments) {
@@ -483,20 +483,20 @@ class AdminController extends Controller {
         $all_attachments =
           Attachment::getAllAttachments($flag->getId()); // TODO: Combine Awaits
         foreach ($all_attachments as $attachment) {
-          $attachments_div .= '<div class="existing-attachment fb-column-container">' . '<div class="col col-pad col-2-3">' . '<div class="form-el">' . '<form class="attachment_form">' . '<input type="hidden" name="attachment_id" value="' . htmlspecialchars(strval($attachment->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Attachment')) . htmlspecialchars($a_c) . ':' . '</label>' . '<input name="filename" type="text" value="' . htmlspecialchars($attachment->getFilename()) . '" disabled />' . '<a href="' . htmlspecialchars($attachment->getFileLink()) . '" target="_blank">' . htmlspecialchars(tr('Link')) . '</a>' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-attachment">'X' . '</button>' . '</div>' . '</div>' . '</div>';
+          $attachments_div .= '<div class="existing-attachment fb-column-container">' . '<div class="col col-pad col-2-3">' . '<div class="form-el">' . '<form class="attachment_form">' . '<input type="hidden" name="attachment_id" value="' . htmlspecialchars(strval($attachment->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Attachment')) . htmlspecialchars($a_c) . ':' . '</label>' . '<input name="filename" type="text" value="' . htmlspecialchars($attachment->getFilename()) . '" disabled />' . '<a href="' . htmlspecialchars($attachment->getFileLink()) . '" target="_blank">' . htmlspecialchars(tr('Link')) . '</a>' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-attachment">' . 'X' . '</button>' . '</div>' . '</div>' . '</div>';
           $a_c++;
         }
       }
 
       $links_div =
-        '<div class="links">' . '<div class="new-link new-link-hidden fb-column-container completely-hidden">' . '<div class="col col-pad col-1-3">' . '<div class="form-el">' . '<form class="link_form">' . '<input type="hidden" name="action" value="create_link" />' . '<input type="hidden" name="level_id" value="' . htmlspecialchars(strval($flag->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('New Link:')) . '</label>' . '<input name="link" type="text" />' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-new-link">'X' . '</button>' . '<button class="fb-cta cta--yellow" data-action="create-link">' . htmlspecialchars(tr('Create')) . '</button>' . '</div>' . '</div>' . '</div>' . '</div>';
+        '<div class="links">' . '<div class="new-link new-link-hidden fb-column-container completely-hidden">' . '<div class="col col-pad col-1-3">' . '<div class="form-el">' . '<form class="link_form">' . '<input type="hidden" name="action" value="create_link" />' . '<input type="hidden" name="level_id" value="' . htmlspecialchars(strval($flag->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('New Link:')) . '</label>' . '<input name="link" type="text" />' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-new-link">' . 'X' . '</button>' . '<button class="fb-cta cta--yellow" data-action="create-link">' . htmlspecialchars(tr('Create')) . '</button>' . '</div>' . '</div>' . '</div>' . '</div>';
 
       $links = Link::hasLinks($flag->getId()); // TODO: Combine Awaits
       if ($links) {
         $l_c = 1;
         $all_links = Link::getAllLinks($flag->getId()); // TODO: Combine Awaits
         foreach ($all_links as $link) {
-          $links_div .= '<div class="existing-link fb-column-container">' . '<div class="col col-pad col-2-3">' . '<div class="form-el">' . '<form class="link_form">' . '<input type="hidden" name="link_id" value="' . htmlspecialchars(strval($link->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Link')) . htmlspecialchars($l_c) . ':' . '</label>' . '<input name="link" type="text" value="' . htmlspecialchars($link->getLink()) . '" disabled />' . '<a href="' . htmlspecialchars($link->getLink()) . '" target="_blank">' . htmlspecialchars(tr('Link')) . '</a>' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-link">'X' . '</button>' . '</div>' . '</div>' . '</div>';
+          $links_div .= '<div class="existing-link fb-column-container">' . '<div class="col col-pad col-2-3">' . '<div class="form-el">' . '<form class="link_form">' . '<input type="hidden" name="link_id" value="' . htmlspecialchars(strval($link->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Link')) . htmlspecialchars($l_c) . ':' . '</label>' . '<input name="link" type="text" value="' . htmlspecialchars($link->getLink()) . '" disabled />' . '<a href="' . htmlspecialchars($link->getLink()) . '" target="_blank">' . htmlspecialchars(tr('Link')) . '</a>' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-link">' . 'X' . '</button>' . '</div>' . '</div>' . '</div>';
           $l_c++;
         }
       }
@@ -548,20 +548,20 @@ class AdminController extends Controller {
         '<div style="display: inline">' . '<input type="hidden" name="level_id" value="' . htmlspecialchars($base_id) . '" />' . '<a href="#" class="fb-cta cta--red js-delete-level" style="margin-right: 20px">' . htmlspecialchars(tr('Delete')) . '</a>' . '</div>';
 
       $attachments_div =
-        '<div class="attachments">' . '<div class="new-attachment new-attachment-hidden fb-column-container completely-hidden">' . '<div class="col col-pad col-1-3">' . '<div class="form-el">' . '<form class="attachment_form">' . '<input type="hidden" name="action" value="create_attachment" />' . '<input type="hidden" name="level_id" value="' . htmlspecialchars(strval($base->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('New Attachment:')) . '</label>' . '<input name="filename" type="text" />' . '<input name="attachment_file" type="file" />' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-new-attachment">'X' . '</button>' . '<button class="fb-cta cta--yellow" data-action="create-attachment">' . htmlspecialchars(tr('Create')) . '</button>' . '</div>' . '</div>' . '</div>' . '</div>';
+        '<div class="attachments">' . '<div class="new-attachment new-attachment-hidden fb-column-container completely-hidden">' . '<div class="col col-pad col-1-3">' . '<div class="form-el">' . '<form class="attachment_form">' . '<input type="hidden" name="action" value="create_attachment" />' . '<input type="hidden" name="level_id" value="' . htmlspecialchars(strval($base->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('New Attachment:')) . '</label>' . '<input name="filename" type="text" />' . '<input name="attachment_file" type="file" />' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-new-attachment">' . 'X' . '</button>' . '<button class="fb-cta cta--yellow" data-action="create-attachment">' . htmlspecialchars(tr('Create')) . '</button>' . '</div>' . '</div>' . '</div>' . '</div>';
       $has_attachments = Attachment::hasAttachments($base->getId()); // TODO: Combine Awaits
       if ($has_attachments) {
         $a_c = 1;
         $all_attachments =
           Attachment::getAllAttachments($base->getId()); // TODO: Combine Awaits
         foreach ($all_attachments as $attachment) {
-          $attachments_div .= '<div class="existing-attachment fb-column-container">' . '<div class="col col-pad col-2-3">' . '<div class="form-el">' . '<form class="attachment_form">' . '<input type="hidden" name="attachment_id" value="' . htmlspecialchars(strval($attachment->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Attachment')) . htmlspecialchars($a_c) . ':' . '</label>' . '<input name="filename" type="text" value="' . htmlspecialchars($attachment->getFilename()) . '" disabled />' . '<a href="' . htmlspecialchars($attachment->getFileLink()) . '" target="_blank">' . htmlspecialchars(tr('Link')) . '</a>' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-attachment">'X' . '</button>' . '</div>' . '</div>' . '</div>';
+          $attachments_div .= '<div class="existing-attachment fb-column-container">' . '<div class="col col-pad col-2-3">' . '<div class="form-el">' . '<form class="attachment_form">' . '<input type="hidden" name="attachment_id" value="' . htmlspecialchars(strval($attachment->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Attachment')) . htmlspecialchars($a_c) . ':' . '</label>' . '<input name="filename" type="text" value="' . htmlspecialchars($attachment->getFilename()) . '" disabled />' . '<a href="' . htmlspecialchars($attachment->getFileLink()) . '" target="_blank">' . htmlspecialchars(tr('Link')) . '</a>' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-attachment">' . 'X' . '</button>' . '</div>' . '</div>' . '</div>';
         }
         $a_c++;
       }
 
       $links_div =
-        '<div class="links">' . '<div class="new-link new-link-hidden fb-column-container completely-hidden">' . '<div class="col col-pad col-1-3">' . '<div class="form-el">' . '<form class="link_form">' . '<input type="hidden" name="action" value="create_link" />' . '<input type="hidden" name="level_id" value="' . htmlspecialchars(strval($base->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('New Link:')) . '</label>' . '<input name="link" type="text" />' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-new-link">'X' . '</button>' . '<button class="fb-cta cta--yellow" data-action="create-link">' . htmlspecialchars(tr('Create')) . '</button>' . '</div>' . '</div>' . '</div>' . '</div>';
+        '<div class="links">' . '<div class="new-link new-link-hidden fb-column-container completely-hidden">' . '<div class="col col-pad col-1-3">' . '<div class="form-el">' . '<form class="link_form">' . '<input type="hidden" name="action" value="create_link" />' . '<input type="hidden" name="level_id" value="' . htmlspecialchars(strval($base->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('New Link:')) . '</label>' . '<input name="link" type="text" />' . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-new-link">' . 'X' . '</button>' . '<button class="fb-cta cta--yellow" data-action="create-link">' . htmlspecialchars(tr('Create')) . '</button>' . '</div>' . '</div>' . '</div>' . '</div>';
 
       $has_links = Link::hasLinks($base->getId()); // TODO: Combine Awaits
       if ($has_links) {
@@ -574,7 +574,7 @@ class AdminController extends Controller {
           } else {
             $link_a = '<a>' . '</a>';
           }
-          $links_div .= '<div class="existing-link fb-column-container">' . '<div class="col col-pad col-2-3">' . '<div class="form-el">' . '<form class="link_form">' . '<input type="hidden" name="link_id" value="' . htmlspecialchars(strval($link->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Link')) . htmlspecialchars($l_c) . ':' . '</label>' . '<input name="link" type="text" value="' . htmlspecialchars($link->getLink()) . '" disabled />' . $link_a . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-link">'X' . '</button>' . '</div>' . '</div>' . '</div>';
+          $links_div .= '<div class="existing-link fb-column-container">' . '<div class="col col-pad col-2-3">' . '<div class="form-el">' . '<form class="link_form">' . '<input type="hidden" name="link_id" value="' . htmlspecialchars(strval($link->getId())) . '" />' . '<div class="col el--block-label el--full-text">' . '<label>' . htmlspecialchars(tr('Link')) . htmlspecialchars($l_c) . ':' . '</label>' . '<input name="link" type="text" value="' . htmlspecialchars($link->getLink()) . '" disabled />' . $link_a . '</div>' . '</form>' . '</div>' . '</div>' . '<div class="admin-buttons col col-pad col-1-3">' . '<div class="col el--block-label el--full-text">' . '<button class="fb-cta cta--red" data-action="delete-link">' . 'X' . '</button>' . '</div>' . '</div>' . '</div>';
         }
         $l_c++;
       }
@@ -681,9 +681,9 @@ class AdminController extends Controller {
         $level = Level::get($score->getLevelId()); // TODO: Combine Awaits
         $country = Country::get($level->getEntityId()); // TODO: Combine Awaits
         $level_str = $country->getName().' - '.$level->getTitle();
-        $scores_tbody .= '<tr>' . '<td style="width: 20%;
-        $scores_tbody .= '</tbody>';">' . htmlspecialchars(time_ago($score->getTs())) . '</td>' . '<td style="width: 13%;">' . htmlspecialchars($score->getType()) . '</td>' . '<td style="width: 7%;">' . htmlspecialchars(strval($score->getPoints())) . '</td>' . '<td style="width: 60%;">' . htmlspecialchars($level_str) . '</td>' . '</tr>';
+        $scores_tbody .= '<tr>' . '<td style="width: 20%;">' . htmlspecialchars(time_ago($score->getTs())) . '</td>' . '<td style="width: 13%;">' . htmlspecialchars($score->getType()) . '</td>' . '<td style="width: 7%;">' . htmlspecialchars(strval($score->getPoints())) . '</td>' . '<td style="width: 60%;">' . htmlspecialchars($level_str) . '</td>' . '</tr>';
       }
+      $scores_tbody .= '</tbody>';
       $scores_div .= '<table>' . '<thead>' . '<tr>' . '<th style="width: 20%;">' . htmlspecialchars(tr('time')) . '_' . '</th>' . '<th style="width: 13%;">' . htmlspecialchars(tr('type')) . '_' . '</th>' . '<th style="width: 7%;">' . htmlspecialchars(tr('pts')) . '_' . '</th>' . '<th style="width: 60%;">' . htmlspecialchars(tr('Level')) . '_' . '</th>' . '</tr>' . '</thead>' . $scores_tbody . '</table>';
     } else {
       $scores_div .= '<div class="fb-column-container">' . '<div class="col col-pad">' . htmlspecialchars(tr('No Scores')) . '</div>' . '</div>';
@@ -708,9 +708,9 @@ class AdminController extends Controller {
         $level = Level::get($failure->getLevelId());
         $country = Country::get($level->getEntityId());
         $level_str = $country->getName().' - '.$level->getTitle();
-        $failures_tbody .= '<tr>' . '<td style="width: 20%;
-        $failures_tbody .= '</tbody>';">' . htmlspecialchars(time_ago($failure->getTs())) . '</td>' . '<td style="width: 40%;">' . htmlspecialchars($level_str) . '</td>' . '<td style="width: 40%;">' . htmlspecialchars($failure->getFlag()) . '</td>' . '</tr>';
+        $failures_tbody .= '<tr>' . '<td style="width: 20%;">' . htmlspecialchars(time_ago($failure->getTs())) . '</td>' . '<td style="width: 40%;">' . htmlspecialchars($level_str) . '</td>' . '<td style="width: 40%;">' . htmlspecialchars($failure->getFlag()) . '</td>' . '</tr>';
       }
+      $failures_tbody .= '</tbody>';
       $failures_div .= '<table>' . '<thead>' . '<tr>' . '<th style="width: 20%;">' . htmlspecialchars(tr('time')) . '_' . '</th>' . '<th style="width: 40%;">' . htmlspecialchars(tr('Level')) . '_' . '</th>' . '<th style="width: 40%;">' . htmlspecialchars(tr('Attempt')) . '_' . '</th>' . '</tr>' . '</thead>' . $failures_tbody . '</table>';
     } else {
       $failures_div .= '<div class="fb-column-container">' . '<div class="col col-pad">' . htmlspecialchars(tr('No Failures')) . '</div>' . '</div>';
@@ -920,11 +920,11 @@ class AdminController extends Controller {
           Level::get($gamelog->getLevelId()),
         ]; // TODO: Combine Awaits
 
-        if (!($team !== null)) { throw new \RuntimeException('Team should not be null'); ];
-        if (!($team instanceof Team)) { throw new \RuntimeException('team should be of type Team'); ];
+        if (!($team !== null)) { throw new \RuntimeException('Team should not be null'); }
+        if (!($team instanceof Team)) { throw new \RuntimeException('team should be of type Team'); }
 
-        if (!($level !== null)) { throw new \RuntimeException('Level should not be null'); ];
-        if (!($level instanceof Level)) { throw new \RuntimeException('level should be of type Level'); ];
+        if (!($level !== null)) { throw new \RuntimeException('Level should not be null'); }
+        if (!($level instanceof Level)) { throw new \RuntimeException('level should be of type Level'); }
 
         $country = Country::get($level->getEntityId()); // TODO: Combine Awaits
 
