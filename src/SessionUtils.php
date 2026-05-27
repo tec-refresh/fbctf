@@ -3,7 +3,7 @@
 class SessionUtils {
   private static string $s_name = 'FBCTF';
   private static int $s_lifetime = 3600;
-  private static bool $s_secure = true;
+  private static bool $s_secure = false;
   private static bool $s_httponly = true;
   private static string $s_path = '/';
 
