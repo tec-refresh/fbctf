@@ -1,4 +1,4 @@
-<?hh // strict
+<?php declare(strict_types=1);
 
 class FailureLog extends Model {
   private function __construct(
@@ -30,7 +30,7 @@ class FailureLog extends Model {
   }
 
   private static function failurelogFromRow(
-    Map<string, string> $row,
+    array $row,
   ): FailureLog {
     return new FailureLog(
       intval(must_have_idx($row, 'id')),
@@ -42,34 +42,32 @@ class FailureLog extends Model {
   }
 
   // Log attempt on score.
-  public static async function genLogFailedScore(
+  public static function logFailedScore(
     int $level_id,
     int $team_id,
     string $flag,
-  ): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf(
-      'INSERT INTO failures_log (ts, level_id, team_id, flag) VALUES(NOW(), %d, %d, %s)',
-      $level_id,
-      $team_id,
-      $flag,
+  ): void {
+    $db = Db::getInstance();
+    $db->query(
+      'INSERT INTO failures_log (ts, level_id, team_id, flag) VALUES(NOW(), ?, ?, ?)',
+      [$level_id, $team_id, $flag],
     );
   }
 
   // Reset all failures.
-  public static async function genResetFailures(): Awaitable<void> {
-    $db = await self::genDb();
-    await $db->queryf('DELETE FROM failures_log WHERE id > 0');
+  public static function resetFailures(): void {
+    $db = Db::getInstance();
+    $db->query('DELETE FROM failures_log WHERE id > 0');
   }
 
   // Get all scores.
-  public static async function genAllFailures(): Awaitable<array<FailureLog>> {
-    $db = await self::genDb();
+  public static function allFailures(): array {
+    $db = Db::getInstance();
     $result =
-      await $db->queryf('SELECT * FROM failures_log ORDER BY ts DESC');
+      $db->query('SELECT * FROM failures_log ORDER BY ts DESC');
 
-    $failures = array();
-    foreach ($result->mapRows() as $row) {
+    $failures = [];
+    foreach ($result->fetchAll() as $row) {
       $failures[] = self::failurelogFromRow($row);
     }
 
@@ -77,17 +75,17 @@ class FailureLog extends Model {
   }
 
   // Get all scores by team.
-  public static async function genAllFailuresByTeam(
+  public static function allFailuresByTeam(
     int $team_id,
-  ): Awaitable<array<FailureLog>> {
-    $db = await self::genDb();
-    $result = await $db->queryf(
-      'SELECT * FROM failures_log WHERE team_id = %d ORDER BY ts DESC',
-      $team_id,
+  ): array {
+    $db = Db::getInstance();
+    $result = $db->query(
+      'SELECT * FROM failures_log WHERE team_id = ? ORDER BY ts DESC',
+      [$team_id],
     );
 
-    $failures = array();
-    foreach ($result->mapRows() as $row) {
+    $failures = [];
+    foreach ($result->fetchAll() as $row) {
       $failures[] = self::failurelogFromRow($row);
     }
 
