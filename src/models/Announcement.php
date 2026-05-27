@@ -89,7 +89,7 @@ class Announcement extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_ANNOUNCEMENTS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $announcements = [];
       $db_result = $db->query(

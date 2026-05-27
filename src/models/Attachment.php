@@ -152,7 +152,7 @@ class Attachment extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('LEVEL_ATTACHMENTS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $attachments = [];
       $result = $db->query('SELECT * FROM attachments', []);
@@ -183,7 +183,7 @@ class Attachment extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('LEVEL_ATTACHMENTS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $attachments = [];
       $result = $db->query('SELECT * FROM attachments', []);
@@ -205,7 +205,7 @@ class Attachment extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('LEVEL_ATTACHMENTS_NAMES');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $filenames = [];
       $attachments = self::allAttachmentsForGame();
@@ -242,7 +242,7 @@ class Attachment extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('LEVEL_ATTACHMENTS_LINKS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $attachment_links = [];
       $attachments = self::allAttachmentsForGame();
@@ -297,7 +297,7 @@ class Attachment extends Model {
     bool $refresh = false,
   ): Attachment {
     $mc_result = self::getMCRecords('ATTACHMENTS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $attachments = [];
       $result = $db->query('SELECT * FROM attachments', []);
@@ -339,7 +339,7 @@ class Attachment extends Model {
     bool $refresh = false,
   ): bool {
     $mc_result = self::getMCRecords('ATTACHMENTS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $attachments = [];
       $result = $db->query('SELECT * FROM attachments', []);
@@ -360,7 +360,7 @@ class Attachment extends Model {
     bool $refresh = false,
   ): bool {
     $mc_result = self::getMCRecords('LEVELS_COUNT');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $attachment_count = [];
       $result = $db->query(

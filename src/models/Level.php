@@ -115,7 +115,7 @@ class Level extends Model implements Importable, Exportable {
     bool $refresh = false,
   ): ?Level {
     $mc_result = self::getMCRecords('LEVEL_BY_COUNTRY');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $level_by_country = [];
       $result = $db->query('SELECT * FROM levels WHERE active = 1', []);
@@ -240,7 +240,7 @@ class Level extends Model implements Importable, Exportable {
     bool $refresh = false,
   ): bool {
     $mc_result = self::getMCRecords('ALL_ACTIVE_LEVELS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $active_levels = [];
       $result = $db->query(
@@ -272,7 +272,7 @@ class Level extends Model implements Importable, Exportable {
     bool $refresh = false,
   ): bool {
     $mc_result = self::getMCRecords('ALL_ACTIVE_LEVELS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $active_levels = [];
       $result = $db->query(
@@ -708,7 +708,7 @@ class Level extends Model implements Importable, Exportable {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_LEVELS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $all_levels = [];
       $result = $db->query('SELECT * FROM levels ORDER BY id', []);
@@ -727,7 +727,7 @@ class Level extends Model implements Importable, Exportable {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_LEVELS_COUNTRY_MAP');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $all_levels = [];
       $result = $db->query('SELECT * FROM levels ORDER BY id', []);
@@ -747,7 +747,7 @@ class Level extends Model implements Importable, Exportable {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_ACTIVE_LEVELS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $active_levels = [];
       $result = $db->query(
@@ -770,7 +770,7 @@ class Level extends Model implements Importable, Exportable {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_ACTIVE_LEVELS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $active_levels = [];
       $result = $db->query(
@@ -808,7 +808,7 @@ class Level extends Model implements Importable, Exportable {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_LEVELS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $all_levels = [];
       $result = $db->query('SELECT * FROM levels ORDER BY id', []);
@@ -858,7 +858,7 @@ class Level extends Model implements Importable, Exportable {
     bool $refresh = false,
   ): Level {
     $mc_result = self::getMCRecords('ALL_LEVELS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $all_levels = [];
       $result = $db->query('SELECT * FROM levels ORDER BY id', []);

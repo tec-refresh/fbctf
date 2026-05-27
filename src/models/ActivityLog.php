@@ -269,7 +269,7 @@ class ActivityLog extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_ACTIVITY');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $activity_log_lines = [];
       $result = $db->query(

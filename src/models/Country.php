@@ -113,7 +113,7 @@ class Country extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_COUNTRIES');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $all_countries =
         self::all('SELECT * FROM countries ORDER BY iso_code');
       self::setMCRecords('ALL_COUNTRIES', $all_countries);
@@ -130,7 +130,7 @@ class Country extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_COUNTRIES_FOR_MAP');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $all_countries =
         self::all('SELECT * FROM countries ORDER BY CHAR_LENGTH(d)');
       self::setMCRecords('ALL_COUNTRIES_FOR_MAP', $all_countries);
@@ -147,7 +147,7 @@ class Country extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_ENABLED_COUNTRIES');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $all_countries =
         self::all('SELECT * FROM countries WHERE enabled = 1');
       self::setMCRecords('ALL_ENABLED_COUNTRIES', $all_countries);
@@ -166,7 +166,7 @@ class Country extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_ENABLED_COUNTRIES_FOR_MAP');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $all_countries = self::all(
         'SELECT * FROM countries WHERE enabled = 1 ORDER BY CHAR_LENGTH(d)',
       );
@@ -185,7 +185,7 @@ class Country extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_AVAILABLE_COUNTRIES');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $all_countries = self::all(
         'SELECT * FROM countries WHERE enabled = 1 AND used = 0',
       );
@@ -212,7 +212,7 @@ class Country extends Model {
     bool $refresh = false,
   ): Country {
     $mc_result = self::getMCRecords('ALL_COUNTRIES_BY_ID');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $all_countries = [];
       $result = $db->query('SELECT * FROM countries ORDER BY id');

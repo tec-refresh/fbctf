@@ -32,6 +32,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/fbctf
 COPY composer.json composer.lock* ./
 COPY src/ src/
+COPY database/ database/
 COPY extra/settings.ini.docker settings.ini
 COPY extra/hash.php extra/hash.php
 

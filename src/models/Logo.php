@@ -138,7 +138,7 @@ class Logo extends Model implements Importable, Exportable {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_LOGOS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $all_logos = [];
       $result = $db->query('SELECT * FROM logos ORDER BY id');
@@ -160,7 +160,7 @@ class Logo extends Model implements Importable, Exportable {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_ENABLED_LOGOS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $all_enabled_logos = [];
       $result = $db->query(

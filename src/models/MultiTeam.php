@@ -48,7 +48,7 @@ class MultiTeam extends Team {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_TEAMS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $all_teams = [];
       $teams = self::teamArrayFromDB('SELECT * FROM teams');
       foreach ($teams as $team) {
@@ -99,9 +99,9 @@ class MultiTeam extends Team {
     $teams_count = count($visible_teams);
     $mc_result = self::getMCRecords('LEADERBOARD');
     if (!$mc_result ||
-        count($mc_result) === 0 ||
+        (is_countable($mc_result) && count($mc_result) === 0) ||
         $leaderboard_limit_cache !== intval($leaderboard_limit->getValue()) ||
-        ($limit === false && (count($mc_result) !== $teams_count)) ||
+        ($limit === false && is_countable($mc_result) && (count($mc_result) !== $teams_count)) ||
         $refresh) {
       if ($limit === true) {
         $teams =
@@ -134,7 +134,7 @@ class MultiTeam extends Team {
     bool $refresh = false,
   ): int {
     $mc_result = self::getMCRecords('POINTS_BY_TYPE');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $points_by_type = [];
       $teams =
         self::teamArrayFromDB(
@@ -182,7 +182,7 @@ class MultiTeam extends Team {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_ACTIVE_TEAMS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $all_active_teams = [];
       $teams = self::teamArrayFromDB(
         'SELECT * FROM teams WHERE active = 1 ORDER BY id',
@@ -203,7 +203,7 @@ class MultiTeam extends Team {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_VISIBLE_TEAMS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $all_visible_teams = [];
       $teams = self::teamArrayFromDB(
         'SELECT * FROM teams WHERE visible = 1 AND active = 1 ORDER BY id',
@@ -225,7 +225,7 @@ class MultiTeam extends Team {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('TEAMS_BY_LOGO');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $all_teams = self::allTeamsCache();
       $teams_by_logo = [];
@@ -258,7 +258,7 @@ class MultiTeam extends Team {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('TEAMS_BY_LEVEL');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $teams_by_completed_level = [];
       $scores =
         self::teamArrayFromDB(
@@ -302,7 +302,7 @@ class MultiTeam extends Team {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('TEAMS_BY_LEVEL');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $teams_by_completed_level = [];
       $scores =
         self::teamArrayFromDB(
@@ -337,7 +337,7 @@ class MultiTeam extends Team {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('TEAMS_NAMES_BY_LEVEL');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $team_names = [];
       $teams = self::allCompletedLevels();
       if (!(is_array($teams))) { throw new RuntimeException('teams should be an array of Team'); }
@@ -373,7 +373,7 @@ class MultiTeam extends Team {
     bool $refresh = false,
   ): Team {
     $mc_result = self::getMCRecords('TEAMS_FIRST_CAP');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $first_team_captured_by_level = [];
       $captures =
         self::teamArrayFromDB(

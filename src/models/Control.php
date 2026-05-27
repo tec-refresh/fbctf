@@ -452,7 +452,7 @@ class Control extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_ACTIVITY');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $result = $db->query(
         'SELECT scores_log.ts AS time, teams.name AS team, countries.iso_code AS country, scores_log.team_id AS team_id FROM scores_log, levels, teams, countries WHERE scores_log.level_id = levels.id AND levels.entity_id = countries.id AND scores_log.team_id = teams.id AND teams.visible = 1 ORDER BY time DESC LIMIT 50',
@@ -480,14 +480,9 @@ class Control extends Model {
   ): bool {
     $contents = file_get_contents($file);
     if ($contents) {
-      $schema = explode(";", $contents);
       $db = Db::getInstance();
-      foreach ($schema as $query) {
-        $query = trim($query);
-        if (!empty($query)) {
-          $db->query($query);
-        }
-      }
+      $conn = $db->getConnection();
+      $conn->exec($contents);
       return true;
     }
     return false;
@@ -495,19 +490,23 @@ class Control extends Model {
 
   public static function resetDatabase(): bool {
     $admins = MultiTeam::allAdmins();
-    $schema = self::loadDatabaseFile('../database/schema.sql');
-    $countries = self::loadDatabaseFile('../database/countries.sql');
-    $logos = self::loadDatabaseFile('../database/logos.sql');
+    $base = __DIR__ . '/../../';
+    $schema = self::loadDatabaseFile($base . 'database/schema.sql');
+    $countries = self::loadDatabaseFile($base . 'database/countries.sql');
+    $logos = self::loadDatabaseFile($base . 'database/logos.sql');
+    $admin_seed = self::loadDatabaseFile($base . 'database/admin.sql');
     if ($schema && $countries && $logos) {
-      foreach ($admins as $admin) {
-        $team_id = Team::create(
-          $admin->getName(),
-          $admin->getPasswordHash(),
-          $admin->getLogo(),
-        );
-        Team::setAdmin($team_id, true);
-        if ($admin->getProtected() === true) {
-          Team::setProtected($team_id, true);
+      if (!$admin_seed) {
+        foreach ($admins as $admin) {
+          $team_id = Team::create(
+            $admin->getName(),
+            $admin->getPasswordHash(),
+            $admin->getLogo(),
+          );
+          Team::setAdmin($team_id, true);
+          if ($admin->getProtected() === true) {
+            Team::setProtected($team_id, true);
+          }
         }
       }
       self::flushMemcached();

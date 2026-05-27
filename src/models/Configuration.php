@@ -41,7 +41,7 @@ class Configuration extends Model {
     bool $refresh = false,
   ): Configuration {
     $mc_result = self::getMCRecords('CONFIGURATION');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $config_values = [];
       $result = $db->query('SELECT * FROM configuration');
@@ -172,7 +172,7 @@ class Configuration extends Model {
     bool $refresh = false,
   ): string {
     $mc_result = self::getMCRecords('FACEBOOK_INTEGRATION_APP_ID');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $settings_file = __DIR__ . '/../../settings.ini';
       $config = parse_ini_file($settings_file);
       $app_id = '';
@@ -190,7 +190,7 @@ class Configuration extends Model {
     bool $refresh = false,
   ): string {
     $mc_result = self::getMCRecords('FACEBOOK_INTEGRATION_APP_SECRET');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $settings_file = __DIR__ . '/../../settings.ini';
       $config = parse_ini_file($settings_file);
       $app_secret = '';
@@ -212,7 +212,7 @@ class Configuration extends Model {
 
   public static function getGoogleOAuthFile(bool $refresh = false): string {
     $mc_result = self::getMCRecords('GOOGLE_INTEGRATION_FILE');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $settings_file = __DIR__ . '/../../settings.ini';
       $config = parse_ini_file($settings_file);
       $oauth_file = '';

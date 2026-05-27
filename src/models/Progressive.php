@@ -65,7 +65,7 @@ class Progressive extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('PROGRESSIVE_POINTS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $progressive = [];
       $result = $db->query(
@@ -101,7 +101,7 @@ class Progressive extends Model {
     bool $refresh = false,
   ): int {
     $mc_result = self::getMCRecords('ITERATION_COUNT');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $result = $db->query(
         'SELECT COUNT(DISTINCT(iteration)) AS C FROM progressive_log',

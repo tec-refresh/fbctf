@@ -78,7 +78,7 @@ class Category extends Model implements Importable, Exportable {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('ALL_CATEGORIES');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $categories = [];
       $result = $db->query('SELECT * FROM categories ORDER BY category ASC');
@@ -170,7 +170,7 @@ class Category extends Model implements Importable, Exportable {
     bool $refresh = false,
   ): Category {
     $mc_result = self::getMCRecords('CATEGORIES');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $categories = [];
       $result = $db->query('SELECT * FROM categories');

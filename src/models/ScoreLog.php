@@ -60,7 +60,7 @@ class ScoreLog extends Model {
   public static function allScores(): array {
     $db = Db::getInstance();
     $mc_result = self::getMCRecords('ALL_SCORES');
-    if (!$mc_result || count($mc_result) === 0) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0)) {
       $result =
         $db->query('SELECT * FROM scores_log ORDER BY ts DESC');
 
@@ -98,7 +98,7 @@ class ScoreLog extends Model {
     bool $refresh = false,
   ): bool {
     $mc_result = self::getMCRecords('LEVEL_CAPTURES');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $level_captures = [];
       $result =
@@ -153,7 +153,7 @@ class ScoreLog extends Model {
     bool $refresh = false,
   ): bool {
     $mc_result = self::getMCRecords('ALL_LEVEL_CAPTURES');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $level_captures = [];
       $result = $db->query('SELECT level_id, team_id FROM scores_log');
@@ -204,7 +204,7 @@ class ScoreLog extends Model {
   ): array {
     $db = Db::getInstance();
     $mc_result = self::getMCRecords('SCORES_BY_TEAM');
-    if (!$mc_result || count($mc_result) === 0) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0)) {
       $scores = [];
       $result =
         $db->query('SELECT * FROM scores_log ORDER BY ts DESC');

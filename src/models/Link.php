@@ -69,7 +69,7 @@ class Link extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('LEVEL_LINKS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $links = [];
       $result = $db->query('SELECT * FROM links', []);
@@ -100,7 +100,7 @@ class Link extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('LEVEL_LINKS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $links = [];
       $result = $db->query('SELECT * FROM links', []);
@@ -121,7 +121,7 @@ class Link extends Model {
     bool $refresh = false,
   ): array {
     $mc_result = self::getMCRecords('LEVEL_LINKS_VALUES');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $link_values = [];
       $links = self::allLinksForGame();
@@ -159,7 +159,7 @@ class Link extends Model {
     bool $refresh = false,
   ): Link {
     $mc_result = self::getMCRecords('LINKS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $links = [];
       $result = $db->query('SELECT * FROM links', []);
@@ -186,7 +186,7 @@ class Link extends Model {
     bool $refresh = false,
   ): bool {
     $mc_result = self::getMCRecords('LEVELS_COUNT');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $link_count = [];
       $result = $db->query(

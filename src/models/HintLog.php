@@ -72,7 +72,7 @@ class HintLog extends Model {
     bool $refresh = false,
   ): bool {
     $mc_result = self::getMCRecords('USED_HINTS');
-    if (!$mc_result || count($mc_result) === 0 || $refresh) {
+    if (!$mc_result || (is_countable($mc_result) && count($mc_result) === 0) || $refresh) {
       $db = Db::getInstance();
       $hints_used = [];
       $result = $db->query('SELECT level_id, team_id FROM hints_log');
