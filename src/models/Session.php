@@ -348,14 +348,11 @@ class Session extends Model {
       }
     }
     // Clean up expired and empty sessions
-    $queries = [
-      sprintf(
-        'DELETE FROM sessions WHERE UNIX_TIMESTAMP(last_access_ts) < %d',
-        time() - $maxlifetime,
-      ),
-      'DELETE FROM sessions WHERE data IS NULL',
-    ];
-    $db->multiQuery($queries);
+    $db->query(
+      'DELETE FROM sessions WHERE UNIX_TIMESTAMP(last_access_ts) < ?',
+      [time() - $maxlifetime],
+    );
+    $db->query('DELETE FROM sessions WHERE data IS NULL');
   }
 
   public static function unprotectedSessions(): array {

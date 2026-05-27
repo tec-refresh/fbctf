@@ -173,7 +173,7 @@ class Configuration extends Model {
   ): string {
     $mc_result = self::getMCRecords('FACEBOOK_INTEGRATION_APP_ID');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $settings_file = '../../settings.ini';
+      $settings_file = __DIR__ . '/../../settings.ini';
       $config = parse_ini_file($settings_file);
       $app_id = '';
       if (array_key_exists('FACEBOOK_OAUTH_APP_ID', $config) === true) {
@@ -191,7 +191,7 @@ class Configuration extends Model {
   ): string {
     $mc_result = self::getMCRecords('FACEBOOK_INTEGRATION_APP_SECRET');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $settings_file = '../../settings.ini';
+      $settings_file = __DIR__ . '/../../settings.ini';
       $config = parse_ini_file($settings_file);
       $app_secret = '';
       if (array_key_exists('FACEBOOK_OAUTH_APP_SECRET', $config) === true) {
@@ -213,7 +213,7 @@ class Configuration extends Model {
   public static function getGoogleOAuthFile(bool $refresh = false): string {
     $mc_result = self::getMCRecords('GOOGLE_INTEGRATION_FILE');
     if (!$mc_result || count($mc_result) === 0 || $refresh) {
-      $settings_file = '../../settings.ini';
+      $settings_file = __DIR__ . '/../../settings.ini';
       $config = parse_ini_file($settings_file);
       $oauth_file = '';
       if ((array_key_exists('GOOGLE_OAUTH_FILE', $config) === true) &&

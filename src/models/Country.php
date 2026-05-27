@@ -54,11 +54,8 @@ class Country extends Model {
   // Make sure all the countries used field is good
   public static function usedAdjust(): void {
     $db = Db::getInstance();
-    $queries = [
-      'UPDATE countries SET used = 1 WHERE id IN (SELECT entity_id FROM levels)',
-      'UPDATE countries SET used = 0 WHERE id NOT IN (SELECT entity_id FROM levels)',
-    ];
-    $db->multiQuery($queries);
+    $db->query('UPDATE countries SET used = 1 WHERE id IN (SELECT entity_id FROM levels)');
+    $db->query('UPDATE countries SET used = 0 WHERE id NOT IN (SELECT entity_id FROM levels)');
     self::invalidateMCRecords();
   }
 

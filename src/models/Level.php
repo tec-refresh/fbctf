@@ -628,11 +628,10 @@ class Level extends Model implements Importable, Exportable {
     }
 
     // Delete all references to level
-    $level_delete_queries[] = sprintf('DELETE FROM levels WHERE id = %d LIMIT 1', $level_id);
-    $level_delete_queries[] = sprintf('DELETE FROM hints_log WHERE level_id = %d', $level_id);
-    $level_delete_queries[] = sprintf('DELETE FROM scores_log WHERE level_id = %d', $level_id);
-    $level_delete_queries[] = sprintf('DELETE FROM failures_log WHERE level_id = %d', $level_id);
-    $db->multiQuery($level_delete_queries);
+    $db->query('DELETE FROM levels WHERE id = ? LIMIT 1', [$level_id]);
+    $db->query('DELETE FROM hints_log WHERE level_id = ?', [$level_id]);
+    $db->query('DELETE FROM scores_log WHERE level_id = ?', [$level_id]);
+    $db->query('DELETE FROM failures_log WHERE level_id = ?', [$level_id]);
 
     self::invalidateMCRecords();
     Control::invalidateMCRecords();

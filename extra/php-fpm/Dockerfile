@@ -1,3 +1,13 @@
+FROM node:20 AS frontend
+
+WORKDIR /build
+COPY package.json ./
+RUN npm install
+
+COPY Gruntfile.js ./
+COPY src/static/ src/static/
+RUN npx grunt build
+
 FROM php:8.3-fpm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -19,6 +29,9 @@ COPY composer.json composer.lock* ./
 COPY src/ src/
 COPY extra/settings.ini.docker settings.ini
 COPY extra/hash.php extra/hash.php
+
+COPY --from=frontend /build/src/static/css/fb-ctf.css src/static/css/fb-ctf.css
+COPY --from=frontend /build/src/static/dist/ src/static/dist/
 
 RUN composer install --no-dev --optimize-autoloader
 

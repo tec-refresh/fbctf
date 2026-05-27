@@ -43,8 +43,10 @@ module.exports = function(grunt) {
           [
             'babelify', {
               presets: [
-                // 'es2015',
-                'react'
+                '@babel/preset-react'
+              ],
+              plugins: [
+                '@babel/plugin-transform-flow-strip-types'
               ]
             }
           ]

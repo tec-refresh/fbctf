@@ -482,8 +482,13 @@ class Control extends Model {
     if ($contents) {
       $schema = explode(";", $contents);
       $db = Db::getInstance();
-      $result = $db->multiQuery($schema);
-      return $result ? true : false;
+      foreach ($schema as $query) {
+        $query = trim($query);
+        if (!empty($query)) {
+          $db->query($query);
+        }
+      }
+      return true;
     }
     return false;
   }
