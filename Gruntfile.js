@@ -1,3 +1,5 @@
+const sass = require('sass');
+
 module.exports = function(grunt) {
   grunt.initConfig({
     env: {
@@ -7,6 +9,7 @@ module.exports = function(grunt) {
     },
     sass: {
       options: {
+        implementation: sass,
         sourceMapEmbed: true
       },
       dist: {
